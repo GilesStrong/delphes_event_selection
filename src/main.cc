@@ -12,7 +12,7 @@ bool debug = false;
 bool getOSTauLeptonPair(delphesReader* reader, std::vector<int>* taus,	std::vector<int> *leptons,
 		int* tau, int* lepton, bool electron) {
 	/*Checks whether an OS tau-lepton pair exists, and if so returns true and points tau and lepton
- 	to the selected particles*/
+ 	to the selected particles.*/
 	std::vector<std::pair<int, int> > pairs; //Initialise array for tau lepton OS pairs
 	for (int t : *taus) { //Loop through taus
 		for (int l : *leptons) { //Loop through leptons
