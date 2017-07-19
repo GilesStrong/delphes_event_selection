@@ -9,6 +9,145 @@
 
 bool debug = false;
 
+std::vector<int> selectBJets(delphesReader* reader) {	
+	using namespace std {
+		using namespace fastjet {
+			double PI = 3.14159265359;
+
+			int btag = 0;
+			// parameters for mass drop tagger
+			double R = 1.5;
+			double mucut = 0.66;
+			double ycut = 0.09;
+
+			// parameters for filtering
+			  unsigned nfilt = 3;  
+			// get bjets from delphes
+		  	vector<PseudoJet> bjets;
+		  	vector<int> bjetIDs;
+		  	for ( int i=0; i<reader->Jet_size; ++i ) {
+		      	fastjet::PseudoJet p;
+				// phi may have strange value
+				Float_t thephi=reader->Jet_Phi[i];
+				while ( thephi > 2.*PI ) thephi -= 2.*PI;
+				p.reset_PtYPhiM ( reader->Jet_PT[i], reader->Jet_Eta[i],
+				thephi, reader->Jet_Mass[i] );
+				if (reader-> Jet_BTag[i] > 0){
+					bjets.push_back ( p );
+					bjetsIDs.push_back(i);
+			    }
+		  	}
+
+		  	if (bjets.size() < 2) {
+		  		bjetsIDs.clear();
+		  		return bjetsIDs;
+		  	}
+		  	if (debug) cout << "no. of bjets: " << bjets.size() << endl;
+
+		    // get calorimeter from delphes
+		    vector<PseudoJet> calorimeter;
+		    for ( int i=0; i<reader->Tower_size; ++i ) {
+				fastjet::PseudoJet p;
+				// phi may have strange value
+				Float_t thephi=reader->Tower_Phi[i];
+				while ( thephi > 2.*PI ) thephi -= 2.*PI;
+				p.reset_PtYPhiM ( reader->Tower_ET[i], reader->Tower_Eta[i],
+					thephi, 0. );
+				calorimeter.push_back ( p );
+		    }
+		      
+		    JetDefinition jet_def ( cambridge_algorithm, R );
+		    ClusterSequence clust_seq ( calorimeter, jet_def );
+		    vector<PseudoJet> jets = sorted_by_pt ( clust_seq.inclusive_jets(fatJetPTMin) );
+		    if (debug) cout << "no. of fat jets: " << jets.size() << endl;
+
+		// apply mass drop tagger
+		  MassDropTagger md_tagger(mucut, ycut);
+		  PseudoJet tagged = md_tagger(jets[0]);
+
+		  if (tagged == 0){
+		    if (debug) cout << "No substructure found" << endl;
+		    bjetsIDs.clear();
+		  	return bjetsIDs;
+		  }
+
+		  PseudoJet parent1 = tagged.pieces()[0];
+		  PseudoJet parent2 = tagged.pieces()[1];
+		  if (debug) cout << "Found suitable pair of subjets. " << endl;
+
+		  // cout << " " << parent1 << endl;
+		  // cout << " " << parent2 << endl;
+		  // cout << "Total = " << endl;
+		  // cout << " " << tagged << endl;
+		  if (debug) cout << "(mass drop = " << tagged.structure_of<MassDropTagger>().mu()
+		       << ", y = " << tagged.structure_of<MassDropTagger>().y() << ")" 
+		       << endl;
+
+		  // next we "filter" it, to remove UE & pileup contamination
+		  //----------------------------------------------------------
+		  //
+		  // [there are two ways of doing this; here we directly use the
+		  // existing cluster sequence and find the exclusive subjets of
+		  // this_jet (i.e. work backwards within the cs starting from
+		  // this_jet); alternatively one can recluster just the
+		  // constituents of the jet]
+		  //
+		  // first get separation between the subjets (called Rbb -- assuming
+		  // it's a Higgs!)
+		  //
+		  // See example 11-filter.cc for another way of implementing the dynamic
+		  // Rfilt used below
+		  double   Rbb = parent1.delta_R(parent2);
+		  double   Rfilt = min(Rbb/2, 0.3); // somewhat arbitrary choice
+
+		  if (debug) cout << "Subjet separation (Rbb) = " << Rbb << ", Rfilt = " << Rfilt << endl;
+
+		  Filter filter(JetDefinition(cambridge_algorithm, Rfilt),
+		    SelectorNHardest(nfilt));
+		  PseudoJet filtered = filter(tagged);
+
+		  // now print out the filtered jets and reconstruct total 
+		  // at the same time
+		  const vector<PseudoJet> & filtered_pieces = filtered.pieces();
+		  cout << "Filtered pieces pt are " << endl;
+		   for (unsigned i = 0; i < nfilt && i < filtered_pieces.size(); i++) {
+		     cout << " " << filtered_pieces[i].pt() << endl;
+		   }
+		  // cout << "Filtered total is " << endl;
+		  // cout << " " << filtered << endl;
+
+		// do b-tagging
+		// a subjet of the fat-jet is considered b-tagged if the delta_R between it and a b-jet (tagged by Delphes) is sufficiently small.
+
+		   bool btag1 = falsel, btag2 = false;
+		   int zero = 0, one = 0;
+
+		   for (unsigned i =0; i < bjets.size(); i++){
+				if (bjets[i].delta_R(filtered_pieces[0]) < Rfilt){
+					btag1 = true;
+					zero = i;
+				}
+				if (bjets[i].delta_R(filtered_pieces[1]) < Rfilt){
+					btag2 = true;
+					one = i;
+				}
+		   }
+
+		   std::vector<int> taggedSubJets(2);
+		   taggedSubJets.push_back(bJetIDs[zero]);
+		   taggedSubJets.push_back(bJetIDs[one]);
+		   if (reader->Jet_PT[taggedSubJets[0]] < reader->Jet_PT[taggedSubJets[1]]) { //Order by pT
+		   		int tmp = taggedSubJets[0];
+		   		taggedSubJets[0] = taggedSubJets[1];
+		   		taggedSubJets[1]= tmp;
+		   }
+
+		   return taggedSubJets;
+		}
+	}
+// print out b-tagged events and the b-jet with highest PT
+}
+
 bool getOSTauLeptonPair(delphesReader* reader, std::vector<int>* taus,	std::vector<int> *leptons,
 		int* tau, int* lepton, bool electron) {
 	/*Checks whether an OS tau-lepton pair exists, and if so returns true and points tau and lepton
@@ -1473,6 +1612,97 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	mu_tau_b_b->Branch("gen_h_tt_E", &gen_h_tt_E);
 	mu_tau_b_b->Branch("gen_mctMatch", &gen_mctMatch);
 	mu_tau_b_b->Branch("gen_weight", &weight);
+	TTree* boosted = new TTree("boosted", "#tau_{h} #tau_{h} b #bar{b}");
+	boosted->Branch("t_0_pT", &t_0_pT);
+	boosted->Branch("t_0_eta", &t_0_eta);
+	boosted->Branch("t_0_phi", &t_0_phi);
+	boosted->Branch("t_0_mass", &t_0_mass);
+	boosted->Branch("t_1_pT", &t_1_pT);
+	boosted->Branch("t_1_eta", &t_1_eta);
+	boosted->Branch("t_1_phi", &t_1_phi);
+	boosted->Branch("t_1_mass", &t_1_mass);
+	boosted->Branch("b_0_pT", &b_0_pT);
+	boosted->Branch("b_0_eta", &b_0_eta);
+	boosted->Branch("b_0_phi", &b_0_phi);
+	boosted->Branch("b_0_mass", &b_0_mass);
+	boosted->Branch("b_1_pT", &b_1_pT);
+	boosted->Branch("b_1_eta", &b_1_eta);
+	boosted->Branch("b_1_phi", &b_1_phi);
+	boosted->Branch("b_1_mass", &b_1_mass);
+	boosted->Branch("mPT_pT", &mPT_pT);
+	boosted->Branch("mPT_phi", &mPT_phi);
+	boosted->Branch("h_tt_pT", &h_tt_pT);
+	boosted->Branch("h_tt_eta", &h_tt_eta);
+	boosted->Branch("h_tt_phi", &h_tt_phi);
+	boosted->Branch("h_tt_mass", &h_tt_mass);
+	boosted->Branch("h_bb_pT", &h_bb_pT);
+	boosted->Branch("h_bb_eta", &h_bb_eta);
+	boosted->Branch("h_bb_phi", &h_bb_phi);
+	boosted->Branch("h_bb_mass", &h_bb_mass);
+	boosted->Branch("diH_pT", &diH_pT);
+	boosted->Branch("diH_eta", &diH_eta);
+	boosted->Branch("diH_phi", &diH_phi);
+	boosted->Branch("diH_mass", &diH_mass);
+	boosted->Branch("hT", &hT);
+	boosted->Branch("sT", &sT);
+	boosted->Branch("centrality", &centrality);
+	boosted->Branch("eVis", &eVis);
+	boosted->Branch("nJets", &nJets);
+	boosted->Branch("nBJets", &nBJets);
+	boosted->Branch("nTauJets", &nTauJets);
+	boosted->Branch("minJetPT", &minJetPT);
+	boosted->Branch("meanJetPT", &meanJetPT);
+	boosted->Branch("maxJetPT", &maxJetPT);
+	boosted->Branch("minJetMass", &minJetMass);
+	boosted->Branch("meanJetMass", &meanJetMass);
+	boosted->Branch("maxJetMass", &maxJetMass);
+	boosted->Branch("minJetEta", &minJetEta);
+	boosted->Branch("meanJetEta", &meanJetEta);
+	boosted->Branch("maxJetEta", &maxJetEta);
+	boosted->Branch("nPhotons", &nPhotons);
+	boosted->Branch("sphericityA", &sphericityA);
+	boosted->Branch("spherocityA", &spherocityA);
+	boosted->Branch("aplanarityA", &aplanarityA);
+	boosted->Branch("aplanorityA", &aplanorityA);
+	boosted->Branch("upsilonA", &upsilonA);
+	boosted->Branch("dShapeA", &dShapeA);
+	boosted->Branch("sphericityP", &sphericityP);
+	boosted->Branch("spherocityP", &spherocityP);
+	boosted->Branch("aplanarityP", &aplanarityP);
+	boosted->Branch("aplanorityP", &aplanorityP);
+	boosted->Branch("upsilonP", &upsilonP);
+	boosted->Branch("dShapeP", &dShapeP);
+	boosted->Branch("gen_t_0_pT", &gen_t_0_pT);
+	boosted->Branch("gen_t_0_eta", &gen_t_0_eta);
+	boosted->Branch("gen_t_0_phi", &gen_t_0_phi);
+	boosted->Branch("gen_t_0_E", &gen_t_0_E);
+	boosted->Branch("gen_t_1_pT", &gen_t_1_pT);
+	boosted->Branch("gen_t_1_eta", &gen_t_1_eta);
+	boosted->Branch("gen_t_1_phi", &gen_t_1_phi);
+	boosted->Branch("gen_t_1_E", &gen_t_1_E);
+	boosted->Branch("gen_b_0_pT", &gen_b_0_pT);
+	boosted->Branch("gen_b_0_eta", &gen_b_0_eta);
+	boosted->Branch("gen_b_0_phi", &gen_b_0_phi);
+	boosted->Branch("gen_b_0_E", &gen_b_0_E);
+	boosted->Branch("gen_b_1_pT", &gen_b_1_pT);
+	boosted->Branch("gen_b_1_eta", &gen_b_1_eta);
+	boosted->Branch("gen_b_1_phi", &gen_b_1_phi);
+	boosted->Branch("gen_b_1_E", &gen_b_1_E);
+	boosted->Branch("gen_diH_pT", &gen_diH_pT);
+	boosted->Branch("gen_diH_eta", &gen_diH_eta);
+	boosted->Branch("gen_diH_phi", &gen_diH_phi);
+	boosted->Branch("gen_diH_E", &gen_diH_E);
+	boosted->Branch("gen_diH_mass", &gen_diH_mass);
+	boosted->Branch("gen_h_bb_pT", &gen_h_bb_pT);
+	boosted->Branch("gen_h_bb_eta", &gen_h_bb_eta);
+	boosted->Branch("gen_h_bb_phi", &gen_h_bb_phi);
+	boosted->Branch("gen_h_bb_E", &gen_h_bb_E);
+	boosted->Branch("gen_h_tt_pT", &gen_h_tt_pT);
+	boosted->Branch("gen_h_tt_eta", &gen_h_tt_eta);
+	boosted->Branch("gen_h_tt_phi", &gen_h_tt_phi);
+	boosted->Branch("gen_h_tt_E", &gen_h_tt_E);
+	boosted->Branch("gen_mctMatch", &gen_mctMatch);
+	boosted->Branch("gen_weight", &weight);
 	TTree* tau_tau_b_b = new TTree("tau_tau_b_b", "#tau_{h} #tau_{h} b #bar{b}");
 	tau_tau_b_b->Branch("t_0_pT", &t_0_pT);
 	tau_tau_b_b->Branch("t_0_eta", &t_0_eta);
@@ -1842,14 +2072,15 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	//Initialise plots___________________________
 	std::cout << "Initialising plot\n";
 	std::map<std::string, TH1D*> mcTruthPlots;
-	TH1D* h_datasetSizes = new TH1D("Dataset_sizes", "Dataset sizes", 7, -0.7, 0.7);
-	mcTruthPlots.insert(std::make_pair("cuts", new TH1D("mcTruth_cutFlow", "MC Truth Cuts", 20, -2.0, 2.0)));
+	TH1D* h_datasetSizes = new TH1D("Dataset_sizes", "Dataset sizes", 8, -0.8, 0.8);
+	mcTruthPlots.insert(std::make_pair("cuts", new TH1D("mcTruth_cutFlow", "MC Truth Cuts", 22, -2.2, 2.2)));
 	mcTruthPlots.insert(std::make_pair("bMatch", new TH1D("mcTruth_bJetMatching", "#DeltaR(b, jet)", 50, 0.0, 0.5)));
 	mcTruthPlots.insert(std::make_pair("tauMatch", new TH1D("mcTruth_tauJetMatching", "#DeltaR(#tau, jet)", 50, 0.0, 0.5)));
 	mcTruthPlots.insert(std::make_pair("higgsDecay", new TH1D("mcTruth_higgsDecay", "Higgs product |PID|", 50, 0, 50)));
 	TH1D* h_e_tau_b_b_cutFlow;
 	TH1D* h_mu_tau_b_b_cutFlow;
 	TH1D* h_tau_tau_b_b_cutFlow;
+	TH1D* h_boosted_cutFlow;
 	TH1D* h_e_e_b_b_cutFlow;
 	TH1D* h_mu_mu_b_b_cutFlow;
 	TH1D* h_e_mu_b_b_cutFlow;
@@ -1857,6 +2088,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 		h_e_tau_b_b_cutFlow = new TH1D("e_tau_b_b_Cut_Flow", "e #tau_{h} b #bar{b} cut flow", 8, -0.8, 0.8);
 		h_mu_tau_b_b_cutFlow = new TH1D("mu_tau_b_b_Cut_Flow", "#mu #tau_{h} b #bar{b} cut flow", 8, -0.8, 0.8);
 		h_tau_tau_b_b_cutFlow = new TH1D("tau_tau_b_b_Cut_Flow", "#tau_{h} #tau_{h} b #bar{b} cut flow", 7, -0.7, 0.7);
+		h_boosted_cutFlow = new TH1D("boosted_Cut_Flow", "boosted cut flow", 7, -0.7, 0.7);
 		h_e_e_b_b_cutFlow = new TH1D("e_e_b_b_Cut_Flow", "e e b #bar{b} cut flow", 8, -0.8, 0.8);
 		h_mu_mu_b_b_cutFlow = new TH1D("mu_mu_b_b_Cut_Flow", "#mu #mu b #bar{b} cut flow", 8, -0.8, 0.8);
 		h_e_mu_b_b_cutFlow = new TH1D("e_mu_b_b_Cut_Flow", "e #mu b #bar{b} cut flow", 8, -0.8, 0.8);
@@ -1864,6 +2096,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 		h_e_tau_b_b_cutFlow = new TH1D("e_tau_b_b_Cut_Flow", "e #tau_{h} b #bar{b} cut flow", 9, -0.9, 0.9);
 		h_mu_tau_b_b_cutFlow = new TH1D("mu_tau_b_b_Cut_Flow", "#mu #tau_{h} b #bar{b} cut flow", 9, -0.9, 0.9);
 		h_tau_tau_b_b_cutFlow = new TH1D("tau_tau_b_b_Cut_Flow", "#tau_{h} #tau_{h} b #bar{b} cut flow", 8, -0.8, 0.8);
+		h_boosted_cutFlow = new TH1D("boosted_Cut_Flow", "boosted cut flow", 8, -0.8, 0.8);
 		h_e_e_b_b_cutFlow = new TH1D("e_e_b_b_Cut_Flow", "e e b #bar{b} cut flow", 9, -0.9, 0.9);
 		h_mu_mu_b_b_cutFlow = new TH1D("mu_mu_b_b_Cut_Flow", "#mu #mu b #bar{b} cut flow", 9, -0.9, 0.9);
 		h_e_mu_b_b_cutFlow = new TH1D("e_mu_b_b_Cut_Flow", "e #mu b #bar{b} cut flow", 9, -0.9, 0.9);
@@ -1872,9 +2105,10 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	h_datasetSizes->GetXaxis()->SetBinLabel(2, "#mu #tau_{h} b #bar{b}");
 	h_datasetSizes->GetXaxis()->SetBinLabel(3, "e #tau_{h} b #bar{b}");
 	h_datasetSizes->GetXaxis()->SetBinLabel(4, "#tau_{h} #tau_{h} b #bar{b}");
-	h_datasetSizes->GetXaxis()->SetBinLabel(5, "e e b #bar{b}");
-	h_datasetSizes->GetXaxis()->SetBinLabel(6, "e #mu b #bar{b}");
-	h_datasetSizes->GetXaxis()->SetBinLabel(7, "#mu #mu b #bar{b}");
+	h_datasetSizes->GetXaxis()->SetBinLabel(5, "Boosted");
+	h_datasetSizes->GetXaxis()->SetBinLabel(6, "e e b #bar{b}");
+	h_datasetSizes->GetXaxis()->SetBinLabel(7, "e #mu b #bar{b}");
+	h_datasetSizes->GetXaxis()->SetBinLabel(8, "#mu #mu b #bar{b}");
 	h_e_tau_b_b_cutFlow->GetXaxis()->SetBinLabel(1, "All");
 	h_e_tau_b_b_cutFlow->GetXaxis()->SetBinLabel(2, "Quality #tau");
 	h_e_tau_b_b_cutFlow->GetXaxis()->SetBinLabel(3, "Quality b#bar{b}");
@@ -1901,6 +2135,14 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	h_tau_tau_b_b_cutFlow->GetXaxis()->SetBinLabel(6, "m_{#tau#tau} Cut");
 	h_tau_tau_b_b_cutFlow->GetXaxis()->SetBinLabel(7, "m_{b#bar{b}} Cut");
 	if (options["-t"] == "1") h_tau_tau_b_b_cutFlow->GetXaxis()->SetBinLabel(8, "MC truth");
+	h_boosted_cutFlow->GetXaxis()->SetBinLabel(1, "All");
+	h_boosted_cutFlow->GetXaxis()->SetBinLabel(2, "Quality #tau#tau");
+	h_boosted_cutFlow->GetXaxis()->SetBinLabel(3, "Quality b#bar{b} fat-jet");
+	h_boosted_cutFlow->GetXaxis()->SetBinLabel(4, "0 e & 0 #mu");
+	h_boosted_cutFlow->GetXaxis()->SetBinLabel(5, "OS");
+	h_boosted_cutFlow->GetXaxis()->SetBinLabel(6, "m_{#tau#tau} Cut");
+	h_boosted_cutFlow->GetXaxis()->SetBinLabel(7, "m_{b#bar{b}} Cut");
+	if (options["-t"] == "1") h_boosted_cutFlow->GetXaxis()->SetBinLabel(8, "MC truth");
 	h_e_e_b_b_cutFlow->GetXaxis()->SetBinLabel(1, "All");
 	h_e_e_b_b_cutFlow->GetXaxis()->SetBinLabel(2, "Quality di-e");
 	h_e_e_b_b_cutFlow->GetXaxis()->SetBinLabel(3, "2 e & 0 #mu");
@@ -1948,6 +2190,8 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(18, "h->#tau#tau->#mu#tau_{h} pass");
 	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(19, "h->#tau#tau->#tau_{h}#tau_{h} check");
 	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(20, "h->#tau#tau->#tau_{h}#tau_{h} pass");
+	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(21, "h->#tau#tau->Boosted check");
+	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(22, "h->#tau#tau->Boosted pass");
 	std::cout << "Plots initialised\n";
 	//___________________________________________
 	//Load data__________________________________
@@ -2397,6 +2641,140 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 										weight = (double)*reader->Event_Weight;
 										tau_tau_b_b->Fill();
 										h_datasetSizes->Fill("#tau_{h} #tau_{h} b #bar{b}", 1);
+										eventAccepted = true;
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+			//___________________________________
+			if (eventAccepted) continue;
+			//Check for boosted finalstates__
+			h_boosted_cutFlow->Fill("All", 1);
+			electrons.clear();
+			muons.clear();
+			taus.clear();
+			bJets.clear();
+			finalstateSet("boosted");
+			for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
+				if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
+						&& std::abs(reader->Jet_Eta[i]) < tauEtaMax) { //Quality tau
+					taus.push_back(i);
+				}
+			}
+			if (taus.size() >= 2) {
+				h_boosted_cutFlow->Fill("Quality #tau#tau", 1);
+				bJets = getSubJets(reader)
+				if (bJets.size() >= 2) {//Quality taus  and b jets pairs found
+					h_boosted_cutFlow->Fill("Quality b#bar{b}", 1);
+					if (nElectrons == 0 && nMuons == 0) {
+						h_boosted_cutFlow->Fill("0 e & 0 #mu", 1);
+						if (getOSTauTauPair(reader, &taus, &tau_0, &tau_1) == true) { //Quality OS pair found
+							h_boosted_cutFlow->Fill("OS", 1);
+							if (selectBJets(reader, &bJets, &bJet_0, &bJet_1) == true) { //Quality b-jet pair found
+								v_tau_0 = getTauHadron(reader, tau_0);
+								v_tau_1 = getTauHadron(reader, tau_1);
+								v_higgs_tt = getHiggs2Taus(reader, v_tau_0, v_tau_1);
+								if (!massCut || (v_higgs_tt.M() >= higgsMassMin && v_higgs_tt.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
+									h_boosted_cutFlow->Fill("m_{#tau#tau} Cut", 1);
+									v_bJet_0 = getBJet(reader, bJet_0);
+									v_bJet_1 = getBJet(reader, bJet_1);
+									v_higgs_bb = getHiggs2Bs(v_bJet_0, v_bJet_1);
+									if (!massCut || (v_higgs_bb.M() >= higgsMassMin && v_higgs_bb.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
+										h_boosted_cutFlow->Fill("m_{b#bar{b}} Cut", 1);
+										if (options["-t"] == "1") {
+											if (!correctDecayChannel(inputs[f], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Event is not h->bbtautau
+										}
+										gen_mctMatch = false;
+										if (options["-t"] == "1") {
+											if (!correctDecayChannel(inputs[f], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Checks if event is h->bbtautau
+											gen_mctMatch = truthCut(inputs[f], cEvent, bJet_0, bJet_1, //Checks final-state selection was correct
+													tau_0, tau_1, hBB, hTauTau, "tau:tau",
+													&mcTruthPlots, &v_gen_higgs_bb, &v_gen_higgs_tt,
+													&v_gen_tau_0, &v_gen_tau_1, &v_gen_bJet_0, &v_gen_bJet_1);
+										}
+										if (options["-t"] == "1" & gen_mctMatch) {
+											h_boosted_cutFlow->Fill("MC truth", 1);
+										}
+										if (debug) std::cout << "Accepted tau_tau_b_b event\n";
+										v_gen_diHiggs = getDiHiggs(v_gen_higgs_tt, v_gen_higgs_bb);
+										gen_t_0_pT = v_gen_tau_0.Pt();
+										gen_t_0_eta = v_gen_tau_0.Eta();
+										gen_t_0_phi = v_gen_tau_0.Phi();
+										gen_t_0_E = v_gen_tau_0.E();
+										gen_t_1_pT = v_gen_tau_1.Pt();
+										gen_t_1_eta = v_gen_tau_1.Eta();
+										gen_t_1_phi = v_gen_tau_1.Phi();
+										gen_t_1_E = v_gen_tau_1.E();
+										gen_b_0_pT = v_gen_bJet_0.Pt();
+										gen_b_0_eta = v_gen_bJet_0.Eta();
+										gen_b_0_phi = v_gen_bJet_0.Phi();
+										gen_b_0_E = v_gen_bJet_0.E();
+										gen_b_1_pT = v_gen_bJet_1.Pt();
+										gen_b_1_eta = v_gen_bJet_1.Eta();
+										gen_b_1_phi = v_gen_bJet_1.Phi();
+										gen_b_1_E = v_gen_bJet_1.E();
+										gen_diH_pT = v_gen_diHiggs.Pt();
+										gen_diH_eta = v_gen_diHiggs.Eta();
+										gen_diH_phi = v_gen_diHiggs.Phi();
+										gen_diH_E = v_gen_diHiggs.E();
+										gen_diH_mass = v_gen_diHiggs.M();
+										gen_h_bb_pT = v_gen_higgs_bb.Pt();
+										gen_h_bb_eta = v_gen_higgs_bb.Eta();
+										gen_h_bb_phi = v_gen_higgs_bb.Phi();
+										gen_h_bb_E = v_gen_higgs_bb.E();
+										gen_h_tt_pT = v_gen_higgs_tt.Pt();
+										gen_h_tt_eta = v_gen_higgs_tt.Eta();
+										gen_h_tt_phi = v_gen_higgs_tt.Phi();
+										gen_h_tt_E = v_gen_higgs_tt.E();
+										t_0_pT = v_tau_0.Pt();
+										t_0_eta = v_tau_0.Eta();
+										t_0_phi = v_tau_0.Phi();
+										t_0_mass = v_tau_0.M();
+										t_1_pT = v_tau_1.Pt();
+										t_1_eta = v_tau_1.Eta();
+										t_1_phi = v_tau_1.Phi();
+										t_1_mass = v_tau_1.M();
+										b_0_pT = v_bJet_0.Pt();
+										b_0_eta = v_bJet_0.Eta();
+										b_0_phi = v_bJet_0.Phi();
+										b_0_mass = v_bJet_0.M();
+										b_1_pT = v_bJet_1.Pt();
+										b_1_eta = v_bJet_1.Eta();
+										b_1_phi = v_bJet_1.Phi();
+										b_1_mass = v_bJet_1.M();
+										mPT_pT = reader->MissingET_MET[0];
+										mPT_phi = reader->MissingET_Phi[0];
+										h_tt_pT = v_higgs_tt.Pt();
+										h_tt_eta = v_higgs_tt.Eta();
+										h_tt_phi = v_higgs_tt.Phi();
+										h_tt_mass = v_higgs_tt.M();
+										h_bb_pT = v_higgs_bb.Pt();
+										h_bb_eta = v_higgs_bb.Eta();
+										h_bb_phi = v_higgs_bb.Phi();
+										h_bb_mass = v_higgs_bb.M();
+										diH_pT = v_diHiggs.Pt();
+										diH_eta = v_diHiggs.Eta();
+										diH_phi = v_diHiggs.Phi();
+										diH_mass = v_diHiggs.M();
+										getGlobalEventInfo(inputs[f], cEvent,
+												&hT, &sT, &centrality, &eVis,
+												&nJets, &nBJets, &nTauJets, &nPhotons,
+												&minJetPT, &meanJetPT, &maxJetPT,
+												&minJetMass, &meanJetMass, &maxJetMass,
+												&minJetEta, &meanJetEta, &maxJetEta,
+												&sphericityA, &spherocityA,
+												&aplanarityA, &aplanorityA,
+												&upsilonA, &dShapeA);
+										getPrimaryEventShapes(v_tau_0, v_tau_1, v_bJet_0, v_bJet_1,
+												&sphericityP, &spherocityP,
+												&aplanarityP, &aplanorityP,
+												&upsilonP, &dShapeP);
+										weight = (double)*reader->Event_Weight;
+										boosted->Fill();
+										h_datasetSizes->Fill("Boosted", 1);
 										eventAccepted = true;
 									}
 								}

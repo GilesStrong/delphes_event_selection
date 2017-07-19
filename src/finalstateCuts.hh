@@ -26,7 +26,7 @@ double bJetPTMin = 30.0; //Gev
 double bJetEtaMax = 2.4;
 double higgsMassMin = 80; //GeV
 double higgsMassMax = 160; //GeV
-
+double fatJetPTMin = 150 //GeV
 bool massCut = false;
 
 void finalstateSet(std::string set) {
@@ -39,6 +39,9 @@ void finalstateSet(std::string set) {
 	} else if (set == "tau_tau_b_b") {
 		tauPTMin = 45.0;
 		tauEtaMax = 2.1;
+	} else if (set == "boosted") {
+		tauPTMin = 20.0;
+		tauEtaMax = 2.3;
 	} else if (set == "e_e_b_b") {
 		tauPTMin = 10.0;
 		tauEtaMax = 2.5;

@@ -60,6 +60,11 @@
 #include "boost/regex.hpp"
 #include "boost/filesystem.hpp"
 #include "boost/algorithm/string.hpp"
+//Fastjet
+#include "fastjet/PseudoJet.hh"
+#include "fastjet/ClusterSequence.hh"
+#include <fastjet/tools/MassDropTagger.hh>
+#include <fastjet/tools/Filter.hh>
 
 const double eMass = 0.0005109989; //GeV
 const double muMass = 0.1056583715; //GeV
