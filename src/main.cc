@@ -1716,7 +1716,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 		eventAccepted = false;
 		int hBB = -1, hTauTau = -1;
 		/*if (options["-t"] == "1") {
-			if (!correctDecayChannel(inputs[f], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Event is not h->bbtautau
+			if (!correctDecayChannel(options["-i"], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Event is not h->bbtautau
 		}*/
 		nElectrons = getNElectrons(reader);
 		nMuons = getNMuons(reader);
@@ -1767,8 +1767,8 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 										v_diHiggs = getDiHiggs(v_higgs_tt, v_higgs_bb);
 										gen_mctMatch = false;
 										if (options["-t"] == "1") {
-											if (!correctDecayChannel(inputs[f], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Checks if event is h->bbtautau
-											gen_mctMatch = truthCut(inputs[f], cEvent, bJet_0, bJet_1, //Checks final-state selection was correct
+											if (!correctDecayChannel(options["-i"], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Checks if event is h->bbtautau
+											gen_mctMatch = truthCut(options["-i"], cEvent, bJet_0, bJet_1, //Checks final-state selection was correct
 													tau_0, lepton_0, hBB, hTauTau, "tau:muon",
 													&mcTruthPlots, &v_gen_higgs_bb, &v_gen_higgs_tt,
 													&v_gen_tau_0, &v_gen_tau_1, &v_gen_bJet_0, &v_gen_bJet_1);
@@ -1837,7 +1837,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 										diH_eta = v_diHiggs.Eta();
 										diH_phi = v_diHiggs.Phi();
 										diH_mass = v_diHiggs.M();
-										getGlobalEventInfo(inputs[f], cEvent,
+										getGlobalEventInfo(options["-i"], cEvent,
 												&hT, &sT, &centrality, &eVis,
 												&nJets, &nBJets, &nTauJets, &nPhotons,
 												&minJetPT, &meanJetPT, &maxJetPT,
@@ -1910,8 +1910,8 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 										h_e_tau_b_b_cutFlow->Fill("m_{b#bar{b}} Cut", 1);
 										gen_mctMatch = false;
 										if (options["-t"] == "1") {
-											if (!correctDecayChannel(inputs[f], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Checks if event is h->bbtautau
-											gen_mctMatch = truthCut(inputs[f], cEvent, bJet_0, bJet_1, //Checks final-state selection was correct
+											if (!correctDecayChannel(options["-i"], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Checks if event is h->bbtautau
+											gen_mctMatch = truthCut(options["-i"], cEvent, bJet_0, bJet_1, //Checks final-state selection was correct
 													tau_0, lepton_0, hBB, hTauTau, "tau:electron",
 													&mcTruthPlots, &v_gen_higgs_bb, &v_gen_higgs_tt,
 													&v_gen_tau_0, &v_gen_tau_1, &v_gen_bJet_0, &v_gen_bJet_1);
@@ -1980,7 +1980,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 										diH_eta = v_diHiggs.Eta();
 										diH_phi = v_diHiggs.Phi();
 										diH_mass = v_diHiggs.M();
-										getGlobalEventInfo(inputs[f], cEvent,
+										getGlobalEventInfo(options["-i"], cEvent,
 												&hT, &sT, &centrality, &eVis,
 												&nJets, &nBJets, &nTauJets, &nPhotons,
 												&minJetPT, &meanJetPT, &maxJetPT,
@@ -2044,12 +2044,12 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 								if (!massCut || (v_higgs_bb.M() >= higgsMassMin && v_higgs_bb.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
 									h_tau_tau_b_b_cutFlow->Fill("m_{b#bar{b}} Cut", 1);
 									if (options["-t"] == "1") {
-										if (!correctDecayChannel(inputs[f], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Event is not h->bbtautau
+										if (!correctDecayChannel(options["-i"], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Event is not h->bbtautau
 									}
 									gen_mctMatch = false;
 									if (options["-t"] == "1") {
-										if (!correctDecayChannel(inputs[f], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Checks if event is h->bbtautau
-										gen_mctMatch = truthCut(inputs[f], cEvent, bJet_0, bJet_1, //Checks final-state selection was correct
+										if (!correctDecayChannel(options["-i"], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Checks if event is h->bbtautau
+										gen_mctMatch = truthCut(options["-i"], cEvent, bJet_0, bJet_1, //Checks final-state selection was correct
 												tau_0, tau_1, hBB, hTauTau, "tau:tau",
 												&mcTruthPlots, &v_gen_higgs_bb, &v_gen_higgs_tt,
 												&v_gen_tau_0, &v_gen_tau_1, &v_gen_bJet_0, &v_gen_bJet_1);
@@ -2118,7 +2118,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 									diH_eta = v_diHiggs.Eta();
 									diH_phi = v_diHiggs.Phi();
 									diH_mass = v_diHiggs.M();
-									getGlobalEventInfo(inputs[f], cEvent,
+									getGlobalEventInfo(options["-i"], cEvent,
 											&hT, &sT, &centrality, &eVis,
 											&nJets, &nBJets, &nTauJets, &nPhotons,
 											&minJetPT, &meanJetPT, &maxJetPT,
@@ -2190,8 +2190,8 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 										h_mu_mu_b_b_cutFlow->Fill("m_{b#bar{b}} Cut", 1);
 										gen_mctMatch = false;
 										if (options["-t"] == "1") {
-											if (!correctDecayChannel(inputs[f], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Checks if event is h->bbtautau
-											gen_mctMatch = truthCut(inputs[f], cEvent, bJet_0, bJet_1, //Checks final-state selection was correct
+											if (!correctDecayChannel(options["-i"], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Checks if event is h->bbtautau
+											gen_mctMatch = truthCut(options["-i"], cEvent, bJet_0, bJet_1, //Checks final-state selection was correct
 													lepton_0, lepton_1, hBB, hTauTau, "muon:muon",
 													&mcTruthPlots, &v_gen_higgs_bb, &v_gen_higgs_tt,
 													&v_gen_tau_0, &v_gen_tau_1, &v_gen_bJet_0, &v_gen_bJet_1);
@@ -2260,7 +2260,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 										diH_eta = v_diHiggs.Eta();
 										diH_phi = v_diHiggs.Phi();
 										diH_mass = v_diHiggs.M();
-										getGlobalEventInfo(inputs[f], cEvent,
+										getGlobalEventInfo(options["-i"], cEvent,
 												&hT, &sT, &centrality, &eVis,
 												&nJets, &nBJets, &nTauJets, &nPhotons,
 												&minJetPT, &meanJetPT, &maxJetPT,
@@ -2339,8 +2339,8 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 										h_e_mu_b_b_cutFlow->Fill("m_{b#bar{b}} Cut", 1);
 										gen_mctMatch = false;
 										if (options["-t"] == "1") {
-											if (!correctDecayChannel(inputs[f], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Checks if event is h->bbtautau
-											gen_mctMatch = truthCut(inputs[f], cEvent, bJet_0, bJet_1, //Checks final-state selection was correct
+											if (!correctDecayChannel(options["-i"], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Checks if event is h->bbtautau
+											gen_mctMatch = truthCut(options["-i"], cEvent, bJet_0, bJet_1, //Checks final-state selection was correct
 													lepton_0, lepton_1, hBB, hTauTau, "muon:electron",
 													&mcTruthPlots, &v_gen_higgs_bb, &v_gen_higgs_tt,
 													&v_gen_tau_0, &v_gen_tau_1, &v_gen_bJet_0, &v_gen_bJet_1);
@@ -2409,7 +2409,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 										diH_eta = v_diHiggs.Eta();
 										diH_phi = v_diHiggs.Phi();
 										diH_mass = v_diHiggs.M();
-										getGlobalEventInfo(inputs[f], cEvent,
+										getGlobalEventInfo(options["-i"], cEvent,
 												&hT, &sT, &centrality, &eVis,
 												&nJets, &nBJets, &nTauJets, &nPhotons,
 												&minJetPT, &meanJetPT, &maxJetPT,
@@ -2482,8 +2482,8 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 										h_e_e_b_b_cutFlow->Fill("m_{b#bar{b}} Cut", 1);
 										gen_mctMatch = false;
 										if (options["-t"] == "1") {
-											if (!correctDecayChannel(inputs[f], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Checks if event is h->bbtautau
-											gen_mctMatch = truthCut(inputs[f], cEvent, bJet_0, bJet_1, //Checks final-state selection was correct
+											if (!correctDecayChannel(options["-i"], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Checks if event is h->bbtautau
+											gen_mctMatch = truthCut(options["-i"], cEvent, bJet_0, bJet_1, //Checks final-state selection was correct
 													lepton_0, lepton_1, hBB, hTauTau, "electron:electron",
 													&mcTruthPlots, &v_gen_higgs_bb, &v_gen_higgs_tt,
 													&v_gen_tau_0, &v_gen_tau_1, &v_gen_bJet_0, &v_gen_bJet_1);
@@ -2552,7 +2552,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 										diH_eta = v_diHiggs.Eta();
 										diH_phi = v_diHiggs.Phi();
 										diH_mass = v_diHiggs.M();
-										getGlobalEventInfo(inputs[f], cEvent,
+										getGlobalEventInfo(options["-i"], cEvent,
 												&hT, &sT, &centrality, &eVis,
 												&nJets, &nBJets, &nTauJets, &nPhotons,
 												&minJetPT, &meanJetPT, &maxJetPT,
