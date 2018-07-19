@@ -312,23 +312,6 @@ void makeDirs(std::string outputName) {
 	}
 }
 
-std::vector<std::string> getInputs(std::string inputChar) {
-	/*Filter input for file list*/
-	std::string input(inputChar);
-	const std::string dir = input.substr(0, input.rfind("/")+1);
-	std::vector<std::string> inputFiles;
-	const boost::regex mask(input.substr(input.rfind("/")+1));
-	std::cout << "Getting input files from directory: " << dir << "\nUsing mask: " << mask << "\n";
-	boost::filesystem::directory_iterator end;
-	for (boost::filesystem::directory_iterator i(dir); i != end; ++i) {
-		if (!boost::filesystem::is_regular_file(i->status())) continue;
-		boost::smatch what;
-		if(!boost::regex_match(i->path().filename().string(), what, mask)) continue;
-		inputFiles.push_back(i->path().string());
-	}
-	return inputFiles;
-}
-
 TLorentzVector getHiggs2Taus(delphesReader* reader, TLorentzVector t_0, TLorentzVector t_1) {
 	/*Returns 4-vector of Higgs->tau tau*/
 	TLorentzVector higgs, mPT;
@@ -1953,374 +1936,89 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	//Load data__________________________________
 	if (options["-s"] != "1") return 0; //Run event selection
 	std::cout << "Running event selection\n";
-	std::vector<std::string> inputs = getInputs(options["-i"]);
-	std::cout << inputs.size() << " input files found\n";
-	for (int f = 0; f < inputs.size(); f++) {
-		std::cout << "Loading file " << f+1 << " of " << inputs.size() << "\n";
-		TFile* inputData = TFile::Open(inputs[f].c_str()); //File containing Delphes-simulated MC data
-		TTree* eventTree = (TTree*)inputData->Get("Delphes");
-		delphesReader* reader = new delphesReader(eventTree);
-		std::cout << "Data loaded\n";
-		//_______________________________________
-		//Loop through events____________________
-		Long64_t nEvents = reader->fChain->GetEntriesFast();
-		std::cout << "Total number of events in file: " << nEvents << "\n";
-		std::vector<int> taus, bJets, electrons, muons;
-		TLorentzVector v_tau_0, v_tau_1, v_bJet_0, v_bJet_1, v_higgs_tt, v_higgs_bb, v_diHiggs;
-		TLorentzVector v_gen_higgs_bb, v_gen_higgs_tt, v_gen_diHiggs, v_gen_tau_0, v_gen_tau_1, v_gen_bJet_0, v_gen_bJet_1;
-		std::cout << "Beginning event loop\n";
-		for (Long64_t cEvent = 0; cEvent < nEvents; cEvent++) {
-			Long64_t nEvent = reader->LoadTree(cEvent); //Load next event
-			reader->fChain->GetEntry(cEvent);
-			if (nEvent < 0) break; //Load next event
-			if (cEvent % 1000 == 0) std::cout << "Loop: " << cEvent << "/" << nEvents << ", " <<
-					100*cEvent/nEvents << "%\n";
-			h_datasetSizes->Fill("All", 1);
-			eventAccepted = false;
-			int hBB = -1, hTauTau = -1;
-			/*if (options["-t"] == "1") {
-				if (!correctDecayChannel(inputs[f], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Event is not h->bbtautau
-			}*/
-			nElectrons = getNElectrons(reader);
-			nMuons = getNMuons(reader);
-			//Check for mu tau b b finalstates___
-			h_mu_tau_b_b_cutFlow->Fill("All", 1);
-			electrons.clear();
-			muons.clear();
-			taus.clear();
-			bJets.clear();
-			finalstateSet("mu_tau_b_b");
-			for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
-				if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
-						&& std::abs(reader->Jet_Eta[i]) < tauEtaMax) { //Quality tau
-					taus.push_back(i);
-				}
-				if (reader->Jet_TauTag[i] == 0 && reader->Jet_BTag[i] == 1 && reader->Jet_PT[i] > bJetPTMin
-						&& std::abs(reader->Jet_Eta[i]) < bJetEtaMax) { //Quality b jet
-					bJets.push_back(i);
-				}
+	TFile* inputData = TFile::Open(options["-i"].c_str()); //File containing Delphes-simulated MC data
+	TTree* eventTree = (TTree*)inputData->Get("Delphes");
+	delphesReader* reader = new delphesReader(eventTree);
+	std::cout << "Data loaded\n";
+	//_______________________________________
+	//Loop through events____________________
+	Long64_t nEvents = reader->fChain->GetEntriesFast();
+	std::cout << "Total number of events in file: " << nEvents << "\n";
+	std::vector<int> taus, bJets, electrons, muons;
+	TLorentzVector v_tau_0, v_tau_1, v_bJet_0, v_bJet_1, v_higgs_tt, v_higgs_bb, v_diHiggs;
+	TLorentzVector v_gen_higgs_bb, v_gen_higgs_tt, v_gen_diHiggs, v_gen_tau_0, v_gen_tau_1, v_gen_bJet_0, v_gen_bJet_1;
+	std::cout << "Beginning event loop\n";
+	for (Long64_t cEvent = 0; cEvent < nEvents; cEvent++) {
+		Long64_t nEvent = reader->LoadTree(cEvent); //Load next event
+		reader->fChain->GetEntry(cEvent);
+		if (nEvent < 0) break; //Load next event
+		if (cEvent % 1000 == 0) std::cout << "Loop: " << cEvent << "/" << nEvents << ", " <<
+				100*cEvent/nEvents << "%\n";
+		h_datasetSizes->Fill("All", 1);
+		eventAccepted = false;
+		int hBB = -1, hTauTau = -1;
+		/*if (options["-t"] == "1") {
+			if (!correctDecayChannel(inputs[f], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Event is not h->bbtautau
+		}*/
+		nElectrons = getNElectrons(reader);
+		nMuons = getNMuons(reader);
+		//Check for mu tau b b finalstates___
+		h_mu_tau_b_b_cutFlow->Fill("All", 1);
+		electrons.clear();
+		muons.clear();
+		taus.clear();
+		bJets.clear();
+		finalstateSet("mu_tau_b_b");
+		for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
+			if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
+					&& std::abs(reader->Jet_Eta[i]) < tauEtaMax) { //Quality tau
+				taus.push_back(i);
 			}
-			if (taus.size() >= 1) {//Quality tau
-				h_mu_tau_b_b_cutFlow->Fill("Quality #tau", 1);
-				if (bJets.size() >= 2) {//Quality b jets pairs found
-					h_mu_tau_b_b_cutFlow->Fill("Quality b#bar{b}", 1);
-					for (int i = 0; i < reader->Muon_size; i++) { //Loop through muons
-						if (reader->Muon_PT[i] > muPTMin && std::abs(reader->Muon_Eta[i]) < muEtaMax
-								&& reader->Muon_IsolationVar[i] < muIsoMax) { //Quality muon
-							muons.push_back(i);
-						}
-					}
-					if (muons.size() >= 1) { //Quality muon found
-						h_mu_tau_b_b_cutFlow->Fill("Quality #mu", 1);
-						if (nMuons == 1 && nElectrons == 0) {
-							h_mu_tau_b_b_cutFlow->Fill("1 #mu & 0 e", 1);
-							if (getOSTauLeptonPair(reader, &taus, &muons, &tau_0, &lepton_0, false) == true) { //Quality OS pair found
-								h_mu_tau_b_b_cutFlow->Fill("OS", 1);
-								if (selectBJets(reader, &bJets, &bJet_0, &bJet_1) == true) { //Quality b-jet pair found
-									v_tau_1 = getTauLepton(reader, lepton_0, "muon");
-									v_tau_0 = getTauHadron(reader, tau_0);
-									v_higgs_tt = getHiggs2Taus(reader, v_tau_0, v_tau_1);
-									if (!massCut || (v_higgs_tt.M() >= higgsMassMin && v_higgs_tt.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
-										h_mu_tau_b_b_cutFlow->Fill("m_{#tau#tau} Cut", 1);
-										v_bJet_0 = getBJet(reader, bJet_0);
-										v_bJet_1 = getBJet(reader, bJet_1);
-										v_higgs_bb = getHiggs2Bs(v_bJet_0, v_bJet_1);
-										if (!massCut || (v_higgs_bb.M() >= higgsMassMin && v_higgs_bb.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
-											h_mu_tau_b_b_cutFlow->Fill("m_{b#bar{b}} Cut", 1);
-											v_diHiggs = getDiHiggs(v_higgs_tt, v_higgs_bb);
-											gen_mctMatch = false;
-											if (options["-t"] == "1") {
-												if (!correctDecayChannel(inputs[f], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Checks if event is h->bbtautau
-												gen_mctMatch = truthCut(inputs[f], cEvent, bJet_0, bJet_1, //Checks final-state selection was correct
-														tau_0, lepton_0, hBB, hTauTau, "tau:muon",
-														&mcTruthPlots, &v_gen_higgs_bb, &v_gen_higgs_tt,
-														&v_gen_tau_0, &v_gen_tau_1, &v_gen_bJet_0, &v_gen_bJet_1);
-											}
-											if (options["-t"] == "1" & gen_mctMatch) {
-												h_mu_tau_b_b_cutFlow->Fill("MC truth", 1);
-											}
-											if (debug) std::cout << "Accepted mu_tau_b_b event\n";
-											v_gen_diHiggs = getDiHiggs(v_gen_higgs_tt, v_gen_higgs_bb);
-											gen_t_0_pT = v_gen_tau_0.Pt();
-											gen_t_0_eta = v_gen_tau_0.Eta();
-											gen_t_0_phi = v_gen_tau_0.Phi();
-											gen_t_0_E = v_gen_tau_0.E();
-											gen_t_1_pT = v_gen_tau_1.Pt();
-											gen_t_1_eta = v_gen_tau_1.Eta();
-											gen_t_1_phi = v_gen_tau_1.Phi();
-											gen_t_1_E = v_gen_tau_1.E();
-											gen_b_0_pT = v_gen_bJet_0.Pt();
-											gen_b_0_eta = v_gen_bJet_0.Eta();
-											gen_b_0_phi = v_gen_bJet_0.Phi();
-											gen_b_0_E = v_gen_bJet_0.E();
-											gen_b_1_pT = v_gen_bJet_1.Pt();
-											gen_b_1_eta = v_gen_bJet_1.Eta();
-											gen_b_1_phi = v_gen_bJet_1.Phi();
-											gen_b_1_E = v_gen_bJet_1.E();
-											gen_diH_pT = v_gen_diHiggs.Pt();
-											gen_diH_eta = v_gen_diHiggs.Eta();
-											gen_diH_phi = v_gen_diHiggs.Phi();
-											gen_diH_E = v_gen_diHiggs.E();
-											gen_diH_mass = v_gen_diHiggs.M();
-											gen_h_bb_pT = v_gen_higgs_bb.Pt();
-											gen_h_bb_eta = v_gen_higgs_bb.Eta();
-											gen_h_bb_phi = v_gen_higgs_bb.Phi();
-											gen_h_bb_E = v_gen_higgs_bb.E();
-											gen_h_tt_pT = v_gen_higgs_tt.Pt();
-											gen_h_tt_eta = v_gen_higgs_tt.Eta();
-											gen_h_tt_phi = v_gen_higgs_tt.Phi();
-											gen_h_tt_E = v_gen_higgs_tt.E();
-											t_0_pT = v_tau_0.Pt();
-											t_0_eta = v_tau_0.Eta();
-											t_0_phi = v_tau_0.Phi();
-											t_0_mass = v_tau_0.M();
-											t_1_pT = v_tau_1.Pt();
-											t_1_eta = v_tau_1.Eta();
-											t_1_phi = v_tau_1.Phi();
-											t_1_mass = muMass;
-											b_0_pT = v_bJet_0.Pt();
-											b_0_eta = v_bJet_0.Eta();
-											b_0_phi = v_bJet_0.Phi();
-											b_0_mass = v_bJet_0.M();
-											b_1_pT = v_bJet_1.Pt();
-											b_1_eta = v_bJet_1.Eta();
-											b_1_phi = v_bJet_1.Phi();
-											b_1_mass = v_bJet_1.M();
-											mPT_pT = reader->MissingET_MET[0];
-											mPT_phi = reader->MissingET_Phi[0];
-											h_tt_pT = v_higgs_tt.Pt();
-											h_tt_eta = v_higgs_tt.Eta();
-											h_tt_phi = v_higgs_tt.Phi();
-											h_tt_mass = v_higgs_tt.M();
-											h_bb_pT = v_higgs_bb.Pt();
-											h_bb_eta = v_higgs_bb.Eta();
-											h_bb_phi = v_higgs_bb.Phi();
-											h_bb_mass = v_higgs_bb.M();
-											diH_pT = v_diHiggs.Pt();
-											diH_eta = v_diHiggs.Eta();
-											diH_phi = v_diHiggs.Phi();
-											diH_mass = v_diHiggs.M();
-											getGlobalEventInfo(inputs[f], cEvent,
-													&hT, &sT, &centrality, &eVis,
-													&nJets, &nBJets, &nTauJets, &nPhotons,
-													&minJetPT, &meanJetPT, &maxJetPT,
-													&minJetMass, &meanJetMass, &maxJetMass,
-													&minJetEta, &meanJetEta, &maxJetEta,
-													&sphericityA, &spherocityA,
-													&aplanarityA, &aplanorityA,
-													&upsilonA, &dShapeA);
-											getPrimaryEventShapes(v_tau_0, v_tau_1, v_bJet_0, v_bJet_1,
-													&sphericityP, &spherocityP,
-													&aplanarityP, &aplanorityP,
-													&upsilonP, &dShapeP);
-											weight = (double)*reader->Event_Weight;
-											mu_tau_b_b->Fill();
-											h_datasetSizes->Fill("#mu #tau_{h} b #bar{b}", 1);
-											eventAccepted = true;
-										}
-									}
-								}
-							}
-						}
+			if (reader->Jet_TauTag[i] == 0 && reader->Jet_BTag[i] == 1 && reader->Jet_PT[i] > bJetPTMin
+					&& std::abs(reader->Jet_Eta[i]) < bJetEtaMax) { //Quality b jet
+				bJets.push_back(i);
+			}
+		}
+		if (taus.size() >= 1) {//Quality tau
+			h_mu_tau_b_b_cutFlow->Fill("Quality #tau", 1);
+			if (bJets.size() >= 2) {//Quality b jets pairs found
+				h_mu_tau_b_b_cutFlow->Fill("Quality b#bar{b}", 1);
+				for (int i = 0; i < reader->Muon_size; i++) { //Loop through muons
+					if (reader->Muon_PT[i] > muPTMin && std::abs(reader->Muon_Eta[i]) < muEtaMax
+							&& reader->Muon_IsolationVar[i] < muIsoMax) { //Quality muon
+						muons.push_back(i);
 					}
 				}
-			}
-			//___________________________________
-			if (eventAccepted) continue;
-			//Check for e tau b b finalstates____
-			h_e_tau_b_b_cutFlow->Fill("All", 1);
-			electrons.clear();
-			muons.clear();
-			taus.clear();
-			bJets.clear();
-			finalstateSet("e_tau_b_b");
-			for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
-				if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
-						&& std::abs(reader->Jet_Eta[i]) < tauEtaMax) { //Quality tau
-					taus.push_back(i);
-				}
-				if (reader->Jet_TauTag[i] == 0 && reader->Jet_BTag[i] == 1 && reader->Jet_PT[i] > bJetPTMin
-						&& std::abs(reader->Jet_Eta[i]) < bJetEtaMax) { //Quality b jet
-					bJets.push_back(i);
-				}
-			}
-			if (taus.size() >= 1) {//Quality tau
-				h_e_tau_b_b_cutFlow->Fill("Quality #tau", 1);
-				if (bJets.size() >= 2) {//Quality b jets pairs found
-					h_e_tau_b_b_cutFlow->Fill("Quality b#bar{b}", 1);
-					for (int i = 0; i < reader->Electron_size; i++) { //Loop through electrons
-						if (reader->Electron_PT[i] > ePTMin && std::abs(reader->Electron_Eta[i]) < eEtaMax
-								&& reader->Electron_IsolationVar[i] < eIsoMax) { //Quality electron
-							electrons.push_back(i);
-						}
-					}
-					if (electrons.size() >= 1) { //Quality electron found
-						h_e_tau_b_b_cutFlow->Fill("Quality e", 1);
-						if (nElectrons == 1 && nMuons == 0) {
-							h_e_tau_b_b_cutFlow->Fill("1 e & 0 #mu", 1);
-							if (getOSTauLeptonPair(reader, &taus, &electrons, &tau_0, &lepton_0, true) == true) { //Quality OS pair found
-								h_e_tau_b_b_cutFlow->Fill("OS", 1);
-								if (selectBJets(reader, &bJets, &bJet_0, &bJet_1) == true) { //Quality b-jet pair selected
-									v_tau_1 = getTauLepton(reader, lepton_0, "electron");
-									v_tau_0 = getTauHadron(reader, tau_0);
-									v_higgs_tt = getHiggs2Taus(reader, v_tau_0, v_tau_1);
-									if (!massCut || (v_higgs_tt.M() >= higgsMassMin && v_higgs_tt.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
-										h_e_tau_b_b_cutFlow->Fill("m_{#tau#tau} Cut", 1);
-										v_bJet_0 = getBJet(reader, bJet_0);
-										v_bJet_1 = getBJet(reader, bJet_1);
-										v_higgs_bb = getHiggs2Bs(v_bJet_0, v_bJet_1);
-										if (!massCut || (v_higgs_bb.M() >= higgsMassMin && v_higgs_bb.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
-											h_e_tau_b_b_cutFlow->Fill("m_{b#bar{b}} Cut", 1);
-											gen_mctMatch = false;
-											if (options["-t"] == "1") {
-												if (!correctDecayChannel(inputs[f], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Checks if event is h->bbtautau
-												gen_mctMatch = truthCut(inputs[f], cEvent, bJet_0, bJet_1, //Checks final-state selection was correct
-														tau_0, lepton_0, hBB, hTauTau, "tau:electron",
-														&mcTruthPlots, &v_gen_higgs_bb, &v_gen_higgs_tt,
-														&v_gen_tau_0, &v_gen_tau_1, &v_gen_bJet_0, &v_gen_bJet_1);
-											}
-											if (options["-t"] == "1" & gen_mctMatch) {
-												h_e_tau_b_b_cutFlow->Fill("MC truth", 1);
-											}
-											if (debug) std::cout << "Accepted e_tau_b_b event\n";
-											v_gen_diHiggs = getDiHiggs(v_gen_higgs_tt, v_gen_higgs_bb);
-											gen_t_0_pT = v_gen_tau_0.Pt();
-											gen_t_0_eta = v_gen_tau_0.Eta();
-											gen_t_0_phi = v_gen_tau_0.Phi();
-											gen_t_0_E = v_gen_tau_0.E();
-											gen_t_1_pT = v_gen_tau_1.Pt();
-											gen_t_1_eta = v_gen_tau_1.Eta();
-											gen_t_1_phi = v_gen_tau_1.Phi();
-											gen_t_1_E = v_gen_tau_1.E();
-											gen_b_0_pT = v_gen_bJet_0.Pt();
-											gen_b_0_eta = v_gen_bJet_0.Eta();
-											gen_b_0_phi = v_gen_bJet_0.Phi();
-											gen_b_0_E = v_gen_bJet_0.E();
-											gen_b_1_pT = v_gen_bJet_1.Pt();
-											gen_b_1_eta = v_gen_bJet_1.Eta();
-											gen_b_1_phi = v_gen_bJet_1.Phi();
-											gen_b_1_E = v_gen_bJet_1.E();
-											gen_diH_pT = v_gen_diHiggs.Pt();
-											gen_diH_eta = v_gen_diHiggs.Eta();
-											gen_diH_phi = v_gen_diHiggs.Phi();
-											gen_diH_E = v_gen_diHiggs.E();
-											gen_diH_mass = v_gen_diHiggs.M();
-											gen_h_bb_pT = v_gen_higgs_bb.Pt();
-											gen_h_bb_eta = v_gen_higgs_bb.Eta();
-											gen_h_bb_phi = v_gen_higgs_bb.Phi();
-											gen_h_bb_E = v_gen_higgs_bb.E();
-											gen_h_tt_pT = v_gen_higgs_tt.Pt();
-											gen_h_tt_eta = v_gen_higgs_tt.Eta();
-											gen_h_tt_phi = v_gen_higgs_tt.Phi();
-											gen_h_tt_E = v_gen_higgs_tt.E();
-											t_0_pT = v_tau_0.Pt();
-											t_0_eta = v_tau_0.Eta();
-											t_0_phi = v_tau_0.Phi();
-											t_0_mass = v_tau_0.M();
-											t_1_pT = v_tau_1.Pt();
-											t_1_eta = v_tau_1.Eta();
-											t_1_phi = v_tau_1.Phi();
-											t_1_mass = eMass;
-											b_0_pT = v_bJet_0.Pt();
-											b_0_eta = v_bJet_0.Eta();
-											b_0_phi = v_bJet_0.Phi();
-											b_0_mass = v_bJet_0.M();
-											b_1_pT = v_bJet_1.Pt();
-											b_1_eta = v_bJet_1.Eta();
-											b_1_phi = v_bJet_1.Phi();
-											b_1_mass = v_bJet_1.M();
-											mPT_pT = reader->MissingET_MET[0];
-											mPT_phi = reader->MissingET_Phi[0];
-											h_tt_pT = v_higgs_tt.Pt();
-											h_tt_eta = v_higgs_tt.Eta();
-											h_tt_phi = v_higgs_tt.Phi();
-											h_tt_mass = v_higgs_tt.M();
-											h_bb_pT = v_higgs_bb.Pt();
-											h_bb_eta = v_higgs_bb.Eta();
-											h_bb_phi = v_higgs_bb.Phi();
-											h_bb_mass = v_higgs_bb.M();
-											diH_pT = v_diHiggs.Pt();
-											diH_eta = v_diHiggs.Eta();
-											diH_phi = v_diHiggs.Phi();
-											diH_mass = v_diHiggs.M();
-											getGlobalEventInfo(inputs[f], cEvent,
-													&hT, &sT, &centrality, &eVis,
-													&nJets, &nBJets, &nTauJets, &nPhotons,
-													&minJetPT, &meanJetPT, &maxJetPT,
-													&minJetMass, &meanJetMass, &maxJetMass,
-													&minJetEta, &meanJetEta, &maxJetEta,
-													&sphericityA, &spherocityA,
-													&aplanarityA, &aplanorityA,
-													&upsilonA, &dShapeA);
-											getPrimaryEventShapes(v_tau_0, v_tau_1, v_bJet_0, v_bJet_1,
-													&sphericityP, &spherocityP,
-													&aplanarityP, &aplanorityP,
-													&upsilonP, &dShapeP);
-											weight = (double)*reader->Event_Weight;
-											e_tau_b_b->Fill();
-											h_datasetSizes->Fill("e #tau_{h} b #bar{b}", 1);
-											eventAccepted = true;
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-			//___________________________________
-			if (eventAccepted) continue;
-			//Check for tau tau b b finalstates__
-			h_tau_tau_b_b_cutFlow->Fill("All", 1);
-			electrons.clear();
-			muons.clear();
-			taus.clear();
-			bJets.clear();
-			finalstateSet("tau_tau_b_b");
-			for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
-				if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
-						&& std::abs(reader->Jet_Eta[i]) < tauEtaMax) { //Quality tau
-					taus.push_back(i);
-				}
-				if (reader->Jet_TauTag[i] == 0 && reader->Jet_BTag[i] == 1 && reader->Jet_PT[i] > bJetPTMin
-						&& std::abs(reader->Jet_Eta[i]) < bJetEtaMax) { //Quality b jet
-					bJets.push_back(i);
-				}
-			}
-			if (taus.size() >= 2) {
-				h_tau_tau_b_b_cutFlow->Fill("Quality #tau#tau", 1);
-				if (bJets.size() >= 2) {//Quality taus  and b jets pairs found
-					h_tau_tau_b_b_cutFlow->Fill("Quality b#bar{b}", 1);
-					if (nElectrons == 0 && nMuons == 0) {
-						h_tau_tau_b_b_cutFlow->Fill("0 e & 0 #mu", 1);
-						if (getOSTauTauPair(reader, &taus, &tau_0, &tau_1) == true) { //Quality OS pair found
-							h_tau_tau_b_b_cutFlow->Fill("OS", 1);
+				if (muons.size() >= 1) { //Quality muon found
+					h_mu_tau_b_b_cutFlow->Fill("Quality #mu", 1);
+					if (nMuons == 1 && nElectrons == 0) {
+						h_mu_tau_b_b_cutFlow->Fill("1 #mu & 0 e", 1);
+						if (getOSTauLeptonPair(reader, &taus, &muons, &tau_0, &lepton_0, false) == true) { //Quality OS pair found
+							h_mu_tau_b_b_cutFlow->Fill("OS", 1);
 							if (selectBJets(reader, &bJets, &bJet_0, &bJet_1) == true) { //Quality b-jet pair found
+								v_tau_1 = getTauLepton(reader, lepton_0, "muon");
 								v_tau_0 = getTauHadron(reader, tau_0);
-								v_tau_1 = getTauHadron(reader, tau_1);
 								v_higgs_tt = getHiggs2Taus(reader, v_tau_0, v_tau_1);
 								if (!massCut || (v_higgs_tt.M() >= higgsMassMin && v_higgs_tt.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
-									h_tau_tau_b_b_cutFlow->Fill("m_{#tau#tau} Cut", 1);
+									h_mu_tau_b_b_cutFlow->Fill("m_{#tau#tau} Cut", 1);
 									v_bJet_0 = getBJet(reader, bJet_0);
 									v_bJet_1 = getBJet(reader, bJet_1);
 									v_higgs_bb = getHiggs2Bs(v_bJet_0, v_bJet_1);
 									if (!massCut || (v_higgs_bb.M() >= higgsMassMin && v_higgs_bb.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
-										h_tau_tau_b_b_cutFlow->Fill("m_{b#bar{b}} Cut", 1);
-										if (options["-t"] == "1") {
-											if (!correctDecayChannel(inputs[f], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Event is not h->bbtautau
-										}
+										h_mu_tau_b_b_cutFlow->Fill("m_{b#bar{b}} Cut", 1);
+										v_diHiggs = getDiHiggs(v_higgs_tt, v_higgs_bb);
 										gen_mctMatch = false;
 										if (options["-t"] == "1") {
 											if (!correctDecayChannel(inputs[f], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Checks if event is h->bbtautau
 											gen_mctMatch = truthCut(inputs[f], cEvent, bJet_0, bJet_1, //Checks final-state selection was correct
-													tau_0, tau_1, hBB, hTauTau, "tau:tau",
+													tau_0, lepton_0, hBB, hTauTau, "tau:muon",
 													&mcTruthPlots, &v_gen_higgs_bb, &v_gen_higgs_tt,
 													&v_gen_tau_0, &v_gen_tau_1, &v_gen_bJet_0, &v_gen_bJet_1);
 										}
 										if (options["-t"] == "1" & gen_mctMatch) {
-											h_tau_tau_b_b_cutFlow->Fill("MC truth", 1);
+											h_mu_tau_b_b_cutFlow->Fill("MC truth", 1);
 										}
-										if (debug) std::cout << "Accepted tau_tau_b_b event\n";
+										if (debug) std::cout << "Accepted mu_tau_b_b event\n";
 										v_gen_diHiggs = getDiHiggs(v_gen_higgs_tt, v_gen_higgs_bb);
 										gen_t_0_pT = v_gen_tau_0.Pt();
 										gen_t_0_eta = v_gen_tau_0.Eta();
@@ -2358,7 +2056,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 										t_1_pT = v_tau_1.Pt();
 										t_1_eta = v_tau_1.Eta();
 										t_1_phi = v_tau_1.Phi();
-										t_1_mass = v_tau_1.M();
+										t_1_mass = muMass;
 										b_0_pT = v_bJet_0.Pt();
 										b_0_eta = v_bJet_0.Eta();
 										b_0_phi = v_bJet_0.Phi();
@@ -2395,8 +2093,8 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 												&aplanarityP, &aplanorityP,
 												&upsilonP, &dShapeP);
 										weight = (double)*reader->Event_Weight;
-										tau_tau_b_b->Fill();
-										h_datasetSizes->Fill("#tau_{h} #tau_{h} b #bar{b}", 1);
+										mu_tau_b_b->Fill();
+										h_datasetSizes->Fill("#mu #tau_{h} b #bar{b}", 1);
 										eventAccepted = true;
 									}
 								}
@@ -2405,142 +2103,142 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					}
 				}
 			}
-			//___________________________________
-			if (eventAccepted) continue;
-			//Check for mu mu b b finalstates______
-			h_mu_mu_b_b_cutFlow->Fill("All", 1);
-			electrons.clear();
-			muons.clear();
-			taus.clear();
-			bJets.clear();
-			finalstateSet("mu_mu_b_b");
-			for (int i = 0; i < reader->Muon_size; i++) { //Loop through muons
-				if (reader->Muon_PT[i] > muPTMin && std::abs(reader->Muon_Eta[i]) < muEtaMax
-						&& reader->Muon_IsolationVar[i] < muIsoMax) { //Quality muons
-					muons.push_back(i);
-				}
+		}
+		//___________________________________
+		if (eventAccepted) continue;
+		//Check for e tau b b finalstates____
+		h_e_tau_b_b_cutFlow->Fill("All", 1);
+		electrons.clear();
+		muons.clear();
+		taus.clear();
+		bJets.clear();
+		finalstateSet("e_tau_b_b");
+		for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
+			if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
+					&& std::abs(reader->Jet_Eta[i]) < tauEtaMax) { //Quality tau
+				taus.push_back(i);
 			}
-			if (muons.size() >= 2) { //Quality di-muon found
-				h_mu_mu_b_b_cutFlow->Fill("Quality di-#mu", 1);
-				if (nMuons == 2 && nElectrons == 0) {
-					h_mu_mu_b_b_cutFlow->Fill("2 #mu & 0 e", 1);
-					if (getOSLeptonLeptonPair(reader, &electrons, &muons, &lepton_0, &lepton_1, "muons") == true) { //Quality OS pair found
-						h_mu_mu_b_b_cutFlow->Fill("OS", 1);
-						for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
-							if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
-									&& std::abs(reader->Jet_Eta[i]) < tauEtaMax) { //Quality tau
-								taus.push_back(i);
-							}
-							if (reader->Jet_TauTag[i] == 0 && reader->Jet_BTag[i] == 1 && reader->Jet_PT[i] > bJetPTMin
-									&& std::abs(reader->Jet_Eta[i]) < bJetEtaMax) { //Quality b jet
-								bJets.push_back(i);
-							}
-						}
-						if (bJets.size() >= 2) {//Quality b jets pairs found
-							if (selectBJets(reader, &bJets, &bJet_0, &bJet_1) == true) { //Quality b-jet pair found
-								h_mu_mu_b_b_cutFlow->Fill("Quality b#bar{b}", 1);
-								if (taus.size() == 0) { //No quality tau
-									h_mu_mu_b_b_cutFlow->Fill("0 #tau_{h}", 1);
-									v_tau_0 = getTauLepton(reader, lepton_0, "muon");
-									v_tau_1 = getTauLepton(reader, lepton_1, "muon");
-									v_higgs_tt = getHiggs2Taus(reader, v_tau_0, v_tau_1);
-									if (!massCut || (v_higgs_tt.M() >= higgsMassMin && v_higgs_tt.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
-										h_mu_mu_b_b_cutFlow->Fill("m_{#tau#tau} Cut", 1);
-										v_bJet_0 = getBJet(reader, bJet_0);
-										v_bJet_1 = getBJet(reader, bJet_1);
-										v_higgs_bb = getHiggs2Bs(v_bJet_0, v_bJet_1);
-										if (!massCut || (v_higgs_bb.M() >= higgsMassMin && v_higgs_bb.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
-											h_mu_mu_b_b_cutFlow->Fill("m_{b#bar{b}} Cut", 1);
-											gen_mctMatch = false;
-											if (options["-t"] == "1") {
-												if (!correctDecayChannel(inputs[f], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Checks if event is h->bbtautau
-												gen_mctMatch = truthCut(inputs[f], cEvent, bJet_0, bJet_1, //Checks final-state selection was correct
-														lepton_0, lepton_1, hBB, hTauTau, "muon:muon",
-														&mcTruthPlots, &v_gen_higgs_bb, &v_gen_higgs_tt,
-														&v_gen_tau_0, &v_gen_tau_1, &v_gen_bJet_0, &v_gen_bJet_1);
-											}
-											if (options["-t"] == "1" & gen_mctMatch) {
-												h_mu_mu_b_b_cutFlow->Fill("MC truth", 1);
-											}
-											if (debug) std::cout << "Accepted mu_mu_b_b event\n";
-											v_gen_diHiggs = getDiHiggs(v_gen_higgs_tt, v_gen_higgs_bb);
-											gen_t_0_pT = v_gen_tau_0.Pt();
-											gen_t_0_eta = v_gen_tau_0.Eta();
-											gen_t_0_phi = v_gen_tau_0.Phi();
-											gen_t_0_E = v_gen_tau_0.E();
-											gen_t_1_pT = v_gen_tau_1.Pt();
-											gen_t_1_eta = v_gen_tau_1.Eta();
-											gen_t_1_phi = v_gen_tau_1.Phi();
-											gen_t_1_E = v_gen_tau_1.E();
-											gen_b_0_pT = v_gen_bJet_0.Pt();
-											gen_b_0_eta = v_gen_bJet_0.Eta();
-											gen_b_0_phi = v_gen_bJet_0.Phi();
-											gen_b_0_E = v_gen_bJet_0.E();
-											gen_b_1_pT = v_gen_bJet_1.Pt();
-											gen_b_1_eta = v_gen_bJet_1.Eta();
-											gen_b_1_phi = v_gen_bJet_1.Phi();
-											gen_b_1_E = v_gen_bJet_1.E();
-											gen_diH_pT = v_gen_diHiggs.Pt();
-											gen_diH_eta = v_gen_diHiggs.Eta();
-											gen_diH_phi = v_gen_diHiggs.Phi();
-											gen_diH_E = v_gen_diHiggs.E();
-											gen_diH_mass = v_gen_diHiggs.M();
-											gen_h_bb_pT = v_gen_higgs_bb.Pt();
-											gen_h_bb_eta = v_gen_higgs_bb.Eta();
-											gen_h_bb_phi = v_gen_higgs_bb.Phi();
-											gen_h_bb_E = v_gen_higgs_bb.E();
-											gen_h_tt_pT = v_gen_higgs_tt.Pt();
-											gen_h_tt_eta = v_gen_higgs_tt.Eta();
-											gen_h_tt_phi = v_gen_higgs_tt.Phi();
-											gen_h_tt_E = v_gen_higgs_tt.E();
-											t_0_pT = v_tau_0.Pt();
-											t_0_eta = v_tau_0.Eta();
-											t_0_phi = v_tau_0.Phi();
-											t_0_mass = muMass;
-											t_1_pT = v_tau_1.Pt();
-											t_1_eta = v_tau_1.Eta();
-											t_1_phi = v_tau_1.Phi();
-											t_1_mass = muMass;
-											b_0_pT = v_bJet_0.Pt();
-											b_0_eta = v_bJet_0.Eta();
-											b_0_phi = v_bJet_0.Phi();
-											b_0_mass = v_bJet_0.M();
-											b_1_pT = v_bJet_1.Pt();
-											b_1_eta = v_bJet_1.Eta();
-											b_1_phi = v_bJet_1.Phi();
-											b_1_mass = v_bJet_1.M();
-											mPT_pT = reader->MissingET_MET[0];
-											mPT_phi = reader->MissingET_Phi[0];
-											h_tt_pT = v_higgs_tt.Pt();
-											h_tt_eta = v_higgs_tt.Eta();
-											h_tt_phi = v_higgs_tt.Phi();
-											h_tt_mass = v_higgs_tt.M();
-											h_bb_pT = v_higgs_bb.Pt();
-											h_bb_eta = v_higgs_bb.Eta();
-											h_bb_phi = v_higgs_bb.Phi();
-											h_bb_mass = v_higgs_bb.M();
-											diH_pT = v_diHiggs.Pt();
-											diH_eta = v_diHiggs.Eta();
-											diH_phi = v_diHiggs.Phi();
-											diH_mass = v_diHiggs.M();
-											getGlobalEventInfo(inputs[f], cEvent,
-													&hT, &sT, &centrality, &eVis,
-													&nJets, &nBJets, &nTauJets, &nPhotons,
-													&minJetPT, &meanJetPT, &maxJetPT,
-													&minJetMass, &meanJetMass, &maxJetMass,
-													&minJetEta, &meanJetEta, &maxJetEta,
-													&sphericityA, &spherocityA,
-													&aplanarityA, &aplanorityA,
-													&upsilonA, &dShapeA);
-											getPrimaryEventShapes(v_tau_0, v_tau_1, v_bJet_0, v_bJet_1,
-													&sphericityP, &spherocityP,
-													&aplanarityP, &aplanorityP,
-													&upsilonP, &dShapeP);
-											weight = (double)*reader->Event_Weight;
-											mu_mu_b_b->Fill();
-											h_datasetSizes->Fill("#mu #mu b #bar{b}", 1);
-											eventAccepted = true;
+			if (reader->Jet_TauTag[i] == 0 && reader->Jet_BTag[i] == 1 && reader->Jet_PT[i] > bJetPTMin
+					&& std::abs(reader->Jet_Eta[i]) < bJetEtaMax) { //Quality b jet
+				bJets.push_back(i);
+			}
+		}
+		if (taus.size() >= 1) {//Quality tau
+			h_e_tau_b_b_cutFlow->Fill("Quality #tau", 1);
+			if (bJets.size() >= 2) {//Quality b jets pairs found
+				h_e_tau_b_b_cutFlow->Fill("Quality b#bar{b}", 1);
+				for (int i = 0; i < reader->Electron_size; i++) { //Loop through electrons
+					if (reader->Electron_PT[i] > ePTMin && std::abs(reader->Electron_Eta[i]) < eEtaMax
+							&& reader->Electron_IsolationVar[i] < eIsoMax) { //Quality electron
+						electrons.push_back(i);
+					}
+				}
+				if (electrons.size() >= 1) { //Quality electron found
+					h_e_tau_b_b_cutFlow->Fill("Quality e", 1);
+					if (nElectrons == 1 && nMuons == 0) {
+						h_e_tau_b_b_cutFlow->Fill("1 e & 0 #mu", 1);
+						if (getOSTauLeptonPair(reader, &taus, &electrons, &tau_0, &lepton_0, true) == true) { //Quality OS pair found
+							h_e_tau_b_b_cutFlow->Fill("OS", 1);
+							if (selectBJets(reader, &bJets, &bJet_0, &bJet_1) == true) { //Quality b-jet pair selected
+								v_tau_1 = getTauLepton(reader, lepton_0, "electron");
+								v_tau_0 = getTauHadron(reader, tau_0);
+								v_higgs_tt = getHiggs2Taus(reader, v_tau_0, v_tau_1);
+								if (!massCut || (v_higgs_tt.M() >= higgsMassMin && v_higgs_tt.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
+									h_e_tau_b_b_cutFlow->Fill("m_{#tau#tau} Cut", 1);
+									v_bJet_0 = getBJet(reader, bJet_0);
+									v_bJet_1 = getBJet(reader, bJet_1);
+									v_higgs_bb = getHiggs2Bs(v_bJet_0, v_bJet_1);
+									if (!massCut || (v_higgs_bb.M() >= higgsMassMin && v_higgs_bb.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
+										h_e_tau_b_b_cutFlow->Fill("m_{b#bar{b}} Cut", 1);
+										gen_mctMatch = false;
+										if (options["-t"] == "1") {
+											if (!correctDecayChannel(inputs[f], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Checks if event is h->bbtautau
+											gen_mctMatch = truthCut(inputs[f], cEvent, bJet_0, bJet_1, //Checks final-state selection was correct
+													tau_0, lepton_0, hBB, hTauTau, "tau:electron",
+													&mcTruthPlots, &v_gen_higgs_bb, &v_gen_higgs_tt,
+													&v_gen_tau_0, &v_gen_tau_1, &v_gen_bJet_0, &v_gen_bJet_1);
 										}
+										if (options["-t"] == "1" & gen_mctMatch) {
+											h_e_tau_b_b_cutFlow->Fill("MC truth", 1);
+										}
+										if (debug) std::cout << "Accepted e_tau_b_b event\n";
+										v_gen_diHiggs = getDiHiggs(v_gen_higgs_tt, v_gen_higgs_bb);
+										gen_t_0_pT = v_gen_tau_0.Pt();
+										gen_t_0_eta = v_gen_tau_0.Eta();
+										gen_t_0_phi = v_gen_tau_0.Phi();
+										gen_t_0_E = v_gen_tau_0.E();
+										gen_t_1_pT = v_gen_tau_1.Pt();
+										gen_t_1_eta = v_gen_tau_1.Eta();
+										gen_t_1_phi = v_gen_tau_1.Phi();
+										gen_t_1_E = v_gen_tau_1.E();
+										gen_b_0_pT = v_gen_bJet_0.Pt();
+										gen_b_0_eta = v_gen_bJet_0.Eta();
+										gen_b_0_phi = v_gen_bJet_0.Phi();
+										gen_b_0_E = v_gen_bJet_0.E();
+										gen_b_1_pT = v_gen_bJet_1.Pt();
+										gen_b_1_eta = v_gen_bJet_1.Eta();
+										gen_b_1_phi = v_gen_bJet_1.Phi();
+										gen_b_1_E = v_gen_bJet_1.E();
+										gen_diH_pT = v_gen_diHiggs.Pt();
+										gen_diH_eta = v_gen_diHiggs.Eta();
+										gen_diH_phi = v_gen_diHiggs.Phi();
+										gen_diH_E = v_gen_diHiggs.E();
+										gen_diH_mass = v_gen_diHiggs.M();
+										gen_h_bb_pT = v_gen_higgs_bb.Pt();
+										gen_h_bb_eta = v_gen_higgs_bb.Eta();
+										gen_h_bb_phi = v_gen_higgs_bb.Phi();
+										gen_h_bb_E = v_gen_higgs_bb.E();
+										gen_h_tt_pT = v_gen_higgs_tt.Pt();
+										gen_h_tt_eta = v_gen_higgs_tt.Eta();
+										gen_h_tt_phi = v_gen_higgs_tt.Phi();
+										gen_h_tt_E = v_gen_higgs_tt.E();
+										t_0_pT = v_tau_0.Pt();
+										t_0_eta = v_tau_0.Eta();
+										t_0_phi = v_tau_0.Phi();
+										t_0_mass = v_tau_0.M();
+										t_1_pT = v_tau_1.Pt();
+										t_1_eta = v_tau_1.Eta();
+										t_1_phi = v_tau_1.Phi();
+										t_1_mass = eMass;
+										b_0_pT = v_bJet_0.Pt();
+										b_0_eta = v_bJet_0.Eta();
+										b_0_phi = v_bJet_0.Phi();
+										b_0_mass = v_bJet_0.M();
+										b_1_pT = v_bJet_1.Pt();
+										b_1_eta = v_bJet_1.Eta();
+										b_1_phi = v_bJet_1.Phi();
+										b_1_mass = v_bJet_1.M();
+										mPT_pT = reader->MissingET_MET[0];
+										mPT_phi = reader->MissingET_Phi[0];
+										h_tt_pT = v_higgs_tt.Pt();
+										h_tt_eta = v_higgs_tt.Eta();
+										h_tt_phi = v_higgs_tt.Phi();
+										h_tt_mass = v_higgs_tt.M();
+										h_bb_pT = v_higgs_bb.Pt();
+										h_bb_eta = v_higgs_bb.Eta();
+										h_bb_phi = v_higgs_bb.Phi();
+										h_bb_mass = v_higgs_bb.M();
+										diH_pT = v_diHiggs.Pt();
+										diH_eta = v_diHiggs.Eta();
+										diH_phi = v_diHiggs.Phi();
+										diH_mass = v_diHiggs.M();
+										getGlobalEventInfo(inputs[f], cEvent,
+												&hT, &sT, &centrality, &eVis,
+												&nJets, &nBJets, &nTauJets, &nPhotons,
+												&minJetPT, &meanJetPT, &maxJetPT,
+												&minJetMass, &meanJetMass, &maxJetMass,
+												&minJetEta, &meanJetEta, &maxJetEta,
+												&sphericityA, &spherocityA,
+												&aplanarityA, &aplanorityA,
+												&upsilonA, &dShapeA);
+										getPrimaryEventShapes(v_tau_0, v_tau_1, v_bJet_0, v_bJet_1,
+												&sphericityP, &spherocityP,
+												&aplanarityP, &aplanorityP,
+												&upsilonP, &dShapeP);
+										weight = (double)*reader->Event_Weight;
+										e_tau_b_b->Fill();
+										h_datasetSizes->Fill("e #tau_{h} b #bar{b}", 1);
+										eventAccepted = true;
 									}
 								}
 							}
@@ -2548,148 +2246,279 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					}
 				}
 			}
-			//___________________________________
-			if (eventAccepted) continue;
-			//Check for e mu b b finalstates______
-			h_e_mu_b_b_cutFlow->Fill("All", 1);
-			electrons.clear();
-			muons.clear();
-			taus.clear();
-			bJets.clear();
-			finalstateSet("e_mu_b_b");
-			for (int i = 0; i < reader->Muon_size; i++) { //Loop through muons
-				if (reader->Muon_PT[i] > muPTMin && std::abs(reader->Muon_Eta[i]) < muEtaMax
-						&& reader->Muon_IsolationVar[i] < muIsoMax) { //Quality muons
-					muons.push_back(i);
-				}
+		}
+		//___________________________________
+		if (eventAccepted) continue;
+		//Check for tau tau b b finalstates__
+		h_tau_tau_b_b_cutFlow->Fill("All", 1);
+		electrons.clear();
+		muons.clear();
+		taus.clear();
+		bJets.clear();
+		finalstateSet("tau_tau_b_b");
+		for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
+			if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
+					&& std::abs(reader->Jet_Eta[i]) < tauEtaMax) { //Quality tau
+				taus.push_back(i);
 			}
-			for (int i = 0; i < reader->Electron_size; i++) { //Loop through electrons
-				if (reader->Electron_PT[i] > muPTMin && std::abs(reader->Electron_Eta[i]) < muEtaMax
-						&& reader->Electron_IsolationVar[i] < muIsoMax) { //Quality electrons
-					electrons.push_back(i);
-				}
+			if (reader->Jet_TauTag[i] == 0 && reader->Jet_BTag[i] == 1 && reader->Jet_PT[i] > bJetPTMin
+					&& std::abs(reader->Jet_Eta[i]) < bJetEtaMax) { //Quality b jet
+				bJets.push_back(i);
 			}
-			if (muons.size() >= 1 && electrons.size() >= 1) { //Quality muon and electron found
-				h_e_mu_b_b_cutFlow->Fill("Quality e and #mu", 1);
-				if (nMuons == 1 && nElectrons == 1) {
-					h_e_mu_b_b_cutFlow->Fill("1 e & 1 #mu", 1);
-					if (getOSLeptonLeptonPair(reader, &electrons, &muons, &lepton_0, &lepton_1, "mixed") == true) { //Quality OS pair found
-						h_e_mu_b_b_cutFlow->Fill("OS", 1);
-						for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
-							if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
-									&& std::abs(reader->Jet_Eta[i]) < tauEtaMax) { //Quality tau
-								taus.push_back(i);
-							}
-							if (reader->Jet_TauTag[i] == 0 && reader->Jet_BTag[i] == 1 && reader->Jet_PT[i] > bJetPTMin
-									&& std::abs(reader->Jet_Eta[i]) < bJetEtaMax) { //Quality b jet
-								bJets.push_back(i);
+		}
+		if (taus.size() >= 2) {
+			h_tau_tau_b_b_cutFlow->Fill("Quality #tau#tau", 1);
+			if (bJets.size() >= 2) {//Quality taus  and b jets pairs found
+				h_tau_tau_b_b_cutFlow->Fill("Quality b#bar{b}", 1);
+				if (nElectrons == 0 && nMuons == 0) {
+					h_tau_tau_b_b_cutFlow->Fill("0 e & 0 #mu", 1);
+					if (getOSTauTauPair(reader, &taus, &tau_0, &tau_1) == true) { //Quality OS pair found
+						h_tau_tau_b_b_cutFlow->Fill("OS", 1);
+						if (selectBJets(reader, &bJets, &bJet_0, &bJet_1) == true) { //Quality b-jet pair found
+							v_tau_0 = getTauHadron(reader, tau_0);
+							v_tau_1 = getTauHadron(reader, tau_1);
+							v_higgs_tt = getHiggs2Taus(reader, v_tau_0, v_tau_1);
+							if (!massCut || (v_higgs_tt.M() >= higgsMassMin && v_higgs_tt.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
+								h_tau_tau_b_b_cutFlow->Fill("m_{#tau#tau} Cut", 1);
+								v_bJet_0 = getBJet(reader, bJet_0);
+								v_bJet_1 = getBJet(reader, bJet_1);
+								v_higgs_bb = getHiggs2Bs(v_bJet_0, v_bJet_1);
+								if (!massCut || (v_higgs_bb.M() >= higgsMassMin && v_higgs_bb.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
+									h_tau_tau_b_b_cutFlow->Fill("m_{b#bar{b}} Cut", 1);
+									if (options["-t"] == "1") {
+										if (!correctDecayChannel(inputs[f], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Event is not h->bbtautau
+									}
+									gen_mctMatch = false;
+									if (options["-t"] == "1") {
+										if (!correctDecayChannel(inputs[f], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Checks if event is h->bbtautau
+										gen_mctMatch = truthCut(inputs[f], cEvent, bJet_0, bJet_1, //Checks final-state selection was correct
+												tau_0, tau_1, hBB, hTauTau, "tau:tau",
+												&mcTruthPlots, &v_gen_higgs_bb, &v_gen_higgs_tt,
+												&v_gen_tau_0, &v_gen_tau_1, &v_gen_bJet_0, &v_gen_bJet_1);
+									}
+									if (options["-t"] == "1" & gen_mctMatch) {
+										h_tau_tau_b_b_cutFlow->Fill("MC truth", 1);
+									}
+									if (debug) std::cout << "Accepted tau_tau_b_b event\n";
+									v_gen_diHiggs = getDiHiggs(v_gen_higgs_tt, v_gen_higgs_bb);
+									gen_t_0_pT = v_gen_tau_0.Pt();
+									gen_t_0_eta = v_gen_tau_0.Eta();
+									gen_t_0_phi = v_gen_tau_0.Phi();
+									gen_t_0_E = v_gen_tau_0.E();
+									gen_t_1_pT = v_gen_tau_1.Pt();
+									gen_t_1_eta = v_gen_tau_1.Eta();
+									gen_t_1_phi = v_gen_tau_1.Phi();
+									gen_t_1_E = v_gen_tau_1.E();
+									gen_b_0_pT = v_gen_bJet_0.Pt();
+									gen_b_0_eta = v_gen_bJet_0.Eta();
+									gen_b_0_phi = v_gen_bJet_0.Phi();
+									gen_b_0_E = v_gen_bJet_0.E();
+									gen_b_1_pT = v_gen_bJet_1.Pt();
+									gen_b_1_eta = v_gen_bJet_1.Eta();
+									gen_b_1_phi = v_gen_bJet_1.Phi();
+									gen_b_1_E = v_gen_bJet_1.E();
+									gen_diH_pT = v_gen_diHiggs.Pt();
+									gen_diH_eta = v_gen_diHiggs.Eta();
+									gen_diH_phi = v_gen_diHiggs.Phi();
+									gen_diH_E = v_gen_diHiggs.E();
+									gen_diH_mass = v_gen_diHiggs.M();
+									gen_h_bb_pT = v_gen_higgs_bb.Pt();
+									gen_h_bb_eta = v_gen_higgs_bb.Eta();
+									gen_h_bb_phi = v_gen_higgs_bb.Phi();
+									gen_h_bb_E = v_gen_higgs_bb.E();
+									gen_h_tt_pT = v_gen_higgs_tt.Pt();
+									gen_h_tt_eta = v_gen_higgs_tt.Eta();
+									gen_h_tt_phi = v_gen_higgs_tt.Phi();
+									gen_h_tt_E = v_gen_higgs_tt.E();
+									t_0_pT = v_tau_0.Pt();
+									t_0_eta = v_tau_0.Eta();
+									t_0_phi = v_tau_0.Phi();
+									t_0_mass = v_tau_0.M();
+									t_1_pT = v_tau_1.Pt();
+									t_1_eta = v_tau_1.Eta();
+									t_1_phi = v_tau_1.Phi();
+									t_1_mass = v_tau_1.M();
+									b_0_pT = v_bJet_0.Pt();
+									b_0_eta = v_bJet_0.Eta();
+									b_0_phi = v_bJet_0.Phi();
+									b_0_mass = v_bJet_0.M();
+									b_1_pT = v_bJet_1.Pt();
+									b_1_eta = v_bJet_1.Eta();
+									b_1_phi = v_bJet_1.Phi();
+									b_1_mass = v_bJet_1.M();
+									mPT_pT = reader->MissingET_MET[0];
+									mPT_phi = reader->MissingET_Phi[0];
+									h_tt_pT = v_higgs_tt.Pt();
+									h_tt_eta = v_higgs_tt.Eta();
+									h_tt_phi = v_higgs_tt.Phi();
+									h_tt_mass = v_higgs_tt.M();
+									h_bb_pT = v_higgs_bb.Pt();
+									h_bb_eta = v_higgs_bb.Eta();
+									h_bb_phi = v_higgs_bb.Phi();
+									h_bb_mass = v_higgs_bb.M();
+									diH_pT = v_diHiggs.Pt();
+									diH_eta = v_diHiggs.Eta();
+									diH_phi = v_diHiggs.Phi();
+									diH_mass = v_diHiggs.M();
+									getGlobalEventInfo(inputs[f], cEvent,
+											&hT, &sT, &centrality, &eVis,
+											&nJets, &nBJets, &nTauJets, &nPhotons,
+											&minJetPT, &meanJetPT, &maxJetPT,
+											&minJetMass, &meanJetMass, &maxJetMass,
+											&minJetEta, &meanJetEta, &maxJetEta,
+											&sphericityA, &spherocityA,
+											&aplanarityA, &aplanorityA,
+											&upsilonA, &dShapeA);
+									getPrimaryEventShapes(v_tau_0, v_tau_1, v_bJet_0, v_bJet_1,
+											&sphericityP, &spherocityP,
+											&aplanarityP, &aplanorityP,
+											&upsilonP, &dShapeP);
+									weight = (double)*reader->Event_Weight;
+									tau_tau_b_b->Fill();
+									h_datasetSizes->Fill("#tau_{h} #tau_{h} b #bar{b}", 1);
+									eventAccepted = true;
+								}
 							}
 						}
-						if (bJets.size() >= 2) {//Quality b jets pairs found
-							if (selectBJets(reader, &bJets, &bJet_0, &bJet_1) == true) { //Quality b-jet pair found
-								h_e_mu_b_b_cutFlow->Fill("Quality b#bar{b}", 1);
-								if (taus.size() == 0) { //No quality tau
-									h_e_mu_b_b_cutFlow->Fill("0 #tau_{h}", 1);
-									v_tau_0 = getTauLepton(reader, lepton_0, "muon");
-									v_tau_1 = getTauLepton(reader, lepton_1, "electron");
-									v_higgs_tt = getHiggs2Taus(reader, v_tau_0, v_tau_1);
-									if (!massCut || (v_higgs_tt.M() >= higgsMassMin && v_higgs_tt.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
-										h_e_mu_b_b_cutFlow->Fill("m_{#tau#tau} Cut", 1);
-										v_bJet_0 = getBJet(reader, bJet_0);
-										v_bJet_1 = getBJet(reader, bJet_1);
-										v_higgs_bb = getHiggs2Bs(v_bJet_0, v_bJet_1);
-										if (!massCut || (v_higgs_bb.M() >= higgsMassMin && v_higgs_bb.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
-											h_e_mu_b_b_cutFlow->Fill("m_{b#bar{b}} Cut", 1);
-											gen_mctMatch = false;
-											if (options["-t"] == "1") {
-												if (!correctDecayChannel(inputs[f], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Checks if event is h->bbtautau
-												gen_mctMatch = truthCut(inputs[f], cEvent, bJet_0, bJet_1, //Checks final-state selection was correct
-														lepton_0, lepton_1, hBB, hTauTau, "muon:electron",
-														&mcTruthPlots, &v_gen_higgs_bb, &v_gen_higgs_tt,
-														&v_gen_tau_0, &v_gen_tau_1, &v_gen_bJet_0, &v_gen_bJet_1);
-											}
-											if (options["-t"] == "1" & gen_mctMatch) {
-												h_e_mu_b_b_cutFlow->Fill("MC truth", 1);
-											}
-											if (debug) std::cout << "Accepted e_mu_b_b event\n";
-											v_gen_diHiggs = getDiHiggs(v_gen_higgs_tt, v_gen_higgs_bb);
-											gen_t_0_pT = v_gen_tau_0.Pt();
-											gen_t_0_eta = v_gen_tau_0.Eta();
-											gen_t_0_phi = v_gen_tau_0.Phi();
-											gen_t_0_E = v_gen_tau_0.E();
-											gen_t_1_pT = v_gen_tau_1.Pt();
-											gen_t_1_eta = v_gen_tau_1.Eta();
-											gen_t_1_phi = v_gen_tau_1.Phi();
-											gen_t_1_E = v_gen_tau_1.E();
-											gen_b_0_pT = v_gen_bJet_0.Pt();
-											gen_b_0_eta = v_gen_bJet_0.Eta();
-											gen_b_0_phi = v_gen_bJet_0.Phi();
-											gen_b_0_E = v_gen_bJet_0.E();
-											gen_b_1_pT = v_gen_bJet_1.Pt();
-											gen_b_1_eta = v_gen_bJet_1.Eta();
-											gen_b_1_phi = v_gen_bJet_1.Phi();
-											gen_b_1_E = v_gen_bJet_1.E();
-											gen_diH_pT = v_gen_diHiggs.Pt();
-											gen_diH_eta = v_gen_diHiggs.Eta();
-											gen_diH_phi = v_gen_diHiggs.Phi();
-											gen_diH_E = v_gen_diHiggs.E();
-											gen_diH_mass = v_gen_diHiggs.M();
-											gen_h_bb_pT = v_gen_higgs_bb.Pt();
-											gen_h_bb_eta = v_gen_higgs_bb.Eta();
-											gen_h_bb_phi = v_gen_higgs_bb.Phi();
-											gen_h_bb_E = v_gen_higgs_bb.E();
-											gen_h_tt_pT = v_gen_higgs_tt.Pt();
-											gen_h_tt_eta = v_gen_higgs_tt.Eta();
-											gen_h_tt_phi = v_gen_higgs_tt.Phi();
-											gen_h_tt_E = v_gen_higgs_tt.E();
-											t_0_pT = v_tau_0.Pt();
-											t_0_eta = v_tau_0.Eta();
-											t_0_phi = v_tau_0.Phi();
-											t_0_mass = muMass;
-											t_1_pT = v_tau_1.Pt();
-											t_1_eta = v_tau_1.Eta();
-											t_1_phi = v_tau_1.Phi();
-											t_1_mass = eMass;
-											b_0_pT = v_bJet_0.Pt();
-											b_0_eta = v_bJet_0.Eta();
-											b_0_phi = v_bJet_0.Phi();
-											b_0_mass = v_bJet_0.M();
-											b_1_pT = v_bJet_1.Pt();
-											b_1_eta = v_bJet_1.Eta();
-											b_1_phi = v_bJet_1.Phi();
-											b_1_mass = v_bJet_1.M();
-											mPT_pT = reader->MissingET_MET[0];
-											mPT_phi = reader->MissingET_Phi[0];
-											h_tt_pT = v_higgs_tt.Pt();
-											h_tt_eta = v_higgs_tt.Eta();
-											h_tt_phi = v_higgs_tt.Phi();
-											h_tt_mass = v_higgs_tt.M();
-											h_bb_pT = v_higgs_bb.Pt();
-											h_bb_eta = v_higgs_bb.Eta();
-											h_bb_phi = v_higgs_bb.Phi();
-											h_bb_mass = v_higgs_bb.M();
-											diH_pT = v_diHiggs.Pt();
-											diH_eta = v_diHiggs.Eta();
-											diH_phi = v_diHiggs.Phi();
-											diH_mass = v_diHiggs.M();
-											getGlobalEventInfo(inputs[f], cEvent,
-													&hT, &sT, &centrality, &eVis,
-													&nJets, &nBJets, &nTauJets, &nPhotons,
-													&minJetPT, &meanJetPT, &maxJetPT,
-													&minJetMass, &meanJetMass, &maxJetMass,
-													&minJetEta, &meanJetEta, &maxJetEta,
-													&sphericityA, &spherocityA,
-													&aplanarityA, &aplanorityA,
-													&upsilonA, &dShapeA);
-											getPrimaryEventShapes(v_tau_0, v_tau_1, v_bJet_0, v_bJet_1,
-													&sphericityP, &spherocityP,
-													&aplanarityP, &aplanorityP,
-													&upsilonP, &dShapeP);
-											weight = (double)*reader->Event_Weight;
-											e_mu_b_b->Fill();
-											h_datasetSizes->Fill("e #mu b #bar{b}", 1);
-											eventAccepted = true;
+					}
+				}
+			}
+		}
+		//___________________________________
+		if (eventAccepted) continue;
+		//Check for mu mu b b finalstates______
+		h_mu_mu_b_b_cutFlow->Fill("All", 1);
+		electrons.clear();
+		muons.clear();
+		taus.clear();
+		bJets.clear();
+		finalstateSet("mu_mu_b_b");
+		for (int i = 0; i < reader->Muon_size; i++) { //Loop through muons
+			if (reader->Muon_PT[i] > muPTMin && std::abs(reader->Muon_Eta[i]) < muEtaMax
+					&& reader->Muon_IsolationVar[i] < muIsoMax) { //Quality muons
+				muons.push_back(i);
+			}
+		}
+		if (muons.size() >= 2) { //Quality di-muon found
+			h_mu_mu_b_b_cutFlow->Fill("Quality di-#mu", 1);
+			if (nMuons == 2 && nElectrons == 0) {
+				h_mu_mu_b_b_cutFlow->Fill("2 #mu & 0 e", 1);
+				if (getOSLeptonLeptonPair(reader, &electrons, &muons, &lepton_0, &lepton_1, "muons") == true) { //Quality OS pair found
+					h_mu_mu_b_b_cutFlow->Fill("OS", 1);
+					for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
+						if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
+								&& std::abs(reader->Jet_Eta[i]) < tauEtaMax) { //Quality tau
+							taus.push_back(i);
+						}
+						if (reader->Jet_TauTag[i] == 0 && reader->Jet_BTag[i] == 1 && reader->Jet_PT[i] > bJetPTMin
+								&& std::abs(reader->Jet_Eta[i]) < bJetEtaMax) { //Quality b jet
+							bJets.push_back(i);
+						}
+					}
+					if (bJets.size() >= 2) {//Quality b jets pairs found
+						if (selectBJets(reader, &bJets, &bJet_0, &bJet_1) == true) { //Quality b-jet pair found
+							h_mu_mu_b_b_cutFlow->Fill("Quality b#bar{b}", 1);
+							if (taus.size() == 0) { //No quality tau
+								h_mu_mu_b_b_cutFlow->Fill("0 #tau_{h}", 1);
+								v_tau_0 = getTauLepton(reader, lepton_0, "muon");
+								v_tau_1 = getTauLepton(reader, lepton_1, "muon");
+								v_higgs_tt = getHiggs2Taus(reader, v_tau_0, v_tau_1);
+								if (!massCut || (v_higgs_tt.M() >= higgsMassMin && v_higgs_tt.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
+									h_mu_mu_b_b_cutFlow->Fill("m_{#tau#tau} Cut", 1);
+									v_bJet_0 = getBJet(reader, bJet_0);
+									v_bJet_1 = getBJet(reader, bJet_1);
+									v_higgs_bb = getHiggs2Bs(v_bJet_0, v_bJet_1);
+									if (!massCut || (v_higgs_bb.M() >= higgsMassMin && v_higgs_bb.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
+										h_mu_mu_b_b_cutFlow->Fill("m_{b#bar{b}} Cut", 1);
+										gen_mctMatch = false;
+										if (options["-t"] == "1") {
+											if (!correctDecayChannel(inputs[f], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Checks if event is h->bbtautau
+											gen_mctMatch = truthCut(inputs[f], cEvent, bJet_0, bJet_1, //Checks final-state selection was correct
+													lepton_0, lepton_1, hBB, hTauTau, "muon:muon",
+													&mcTruthPlots, &v_gen_higgs_bb, &v_gen_higgs_tt,
+													&v_gen_tau_0, &v_gen_tau_1, &v_gen_bJet_0, &v_gen_bJet_1);
 										}
+										if (options["-t"] == "1" & gen_mctMatch) {
+											h_mu_mu_b_b_cutFlow->Fill("MC truth", 1);
+										}
+										if (debug) std::cout << "Accepted mu_mu_b_b event\n";
+										v_gen_diHiggs = getDiHiggs(v_gen_higgs_tt, v_gen_higgs_bb);
+										gen_t_0_pT = v_gen_tau_0.Pt();
+										gen_t_0_eta = v_gen_tau_0.Eta();
+										gen_t_0_phi = v_gen_tau_0.Phi();
+										gen_t_0_E = v_gen_tau_0.E();
+										gen_t_1_pT = v_gen_tau_1.Pt();
+										gen_t_1_eta = v_gen_tau_1.Eta();
+										gen_t_1_phi = v_gen_tau_1.Phi();
+										gen_t_1_E = v_gen_tau_1.E();
+										gen_b_0_pT = v_gen_bJet_0.Pt();
+										gen_b_0_eta = v_gen_bJet_0.Eta();
+										gen_b_0_phi = v_gen_bJet_0.Phi();
+										gen_b_0_E = v_gen_bJet_0.E();
+										gen_b_1_pT = v_gen_bJet_1.Pt();
+										gen_b_1_eta = v_gen_bJet_1.Eta();
+										gen_b_1_phi = v_gen_bJet_1.Phi();
+										gen_b_1_E = v_gen_bJet_1.E();
+										gen_diH_pT = v_gen_diHiggs.Pt();
+										gen_diH_eta = v_gen_diHiggs.Eta();
+										gen_diH_phi = v_gen_diHiggs.Phi();
+										gen_diH_E = v_gen_diHiggs.E();
+										gen_diH_mass = v_gen_diHiggs.M();
+										gen_h_bb_pT = v_gen_higgs_bb.Pt();
+										gen_h_bb_eta = v_gen_higgs_bb.Eta();
+										gen_h_bb_phi = v_gen_higgs_bb.Phi();
+										gen_h_bb_E = v_gen_higgs_bb.E();
+										gen_h_tt_pT = v_gen_higgs_tt.Pt();
+										gen_h_tt_eta = v_gen_higgs_tt.Eta();
+										gen_h_tt_phi = v_gen_higgs_tt.Phi();
+										gen_h_tt_E = v_gen_higgs_tt.E();
+										t_0_pT = v_tau_0.Pt();
+										t_0_eta = v_tau_0.Eta();
+										t_0_phi = v_tau_0.Phi();
+										t_0_mass = muMass;
+										t_1_pT = v_tau_1.Pt();
+										t_1_eta = v_tau_1.Eta();
+										t_1_phi = v_tau_1.Phi();
+										t_1_mass = muMass;
+										b_0_pT = v_bJet_0.Pt();
+										b_0_eta = v_bJet_0.Eta();
+										b_0_phi = v_bJet_0.Phi();
+										b_0_mass = v_bJet_0.M();
+										b_1_pT = v_bJet_1.Pt();
+										b_1_eta = v_bJet_1.Eta();
+										b_1_phi = v_bJet_1.Phi();
+										b_1_mass = v_bJet_1.M();
+										mPT_pT = reader->MissingET_MET[0];
+										mPT_phi = reader->MissingET_Phi[0];
+										h_tt_pT = v_higgs_tt.Pt();
+										h_tt_eta = v_higgs_tt.Eta();
+										h_tt_phi = v_higgs_tt.Phi();
+										h_tt_mass = v_higgs_tt.M();
+										h_bb_pT = v_higgs_bb.Pt();
+										h_bb_eta = v_higgs_bb.Eta();
+										h_bb_phi = v_higgs_bb.Phi();
+										h_bb_mass = v_higgs_bb.M();
+										diH_pT = v_diHiggs.Pt();
+										diH_eta = v_diHiggs.Eta();
+										diH_phi = v_diHiggs.Phi();
+										diH_mass = v_diHiggs.M();
+										getGlobalEventInfo(inputs[f], cEvent,
+												&hT, &sT, &centrality, &eVis,
+												&nJets, &nBJets, &nTauJets, &nPhotons,
+												&minJetPT, &meanJetPT, &maxJetPT,
+												&minJetMass, &meanJetMass, &maxJetMass,
+												&minJetEta, &meanJetEta, &maxJetEta,
+												&sphericityA, &spherocityA,
+												&aplanarityA, &aplanorityA,
+												&upsilonA, &dShapeA);
+										getPrimaryEventShapes(v_tau_0, v_tau_1, v_bJet_0, v_bJet_1,
+												&sphericityP, &spherocityP,
+												&aplanarityP, &aplanorityP,
+												&upsilonP, &dShapeP);
+										weight = (double)*reader->Event_Weight;
+										mu_mu_b_b->Fill();
+										h_datasetSizes->Fill("#mu #mu b #bar{b}", 1);
+										eventAccepted = true;
 									}
 								}
 							}
@@ -2697,142 +2526,148 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					}
 				}
 			}
-			//___________________________________
-			if (eventAccepted) continue;
-			//Check for e e b b finalstates______
-			h_e_e_b_b_cutFlow->Fill("All", 1);
-			electrons.clear();
-			muons.clear();
-			taus.clear();
-			bJets.clear();
-			finalstateSet("e_W_b_b");
-			for (int i = 0; i < reader->Electron_size; i++) { //Loop through electrons
-				if (reader->Electron_PT[i] > muPTMin && std::abs(reader->Electron_Eta[i]) < muEtaMax
-						&& reader->Electron_IsolationVar[i] < muIsoMax) { //Quality electrons
-					electrons.push_back(i);
-				}
+		}
+		//___________________________________
+		if (eventAccepted) continue;
+		//Check for e mu b b finalstates______
+		h_e_mu_b_b_cutFlow->Fill("All", 1);
+		electrons.clear();
+		muons.clear();
+		taus.clear();
+		bJets.clear();
+		finalstateSet("e_mu_b_b");
+		for (int i = 0; i < reader->Muon_size; i++) { //Loop through muons
+			if (reader->Muon_PT[i] > muPTMin && std::abs(reader->Muon_Eta[i]) < muEtaMax
+					&& reader->Muon_IsolationVar[i] < muIsoMax) { //Quality muons
+				muons.push_back(i);
 			}
-			if (electrons.size() >= 2) { //Quality di-electron found
-				h_e_e_b_b_cutFlow->Fill("Quality di-e", 1);
-				if (nMuons == 0 && nElectrons == 2) {
-					h_e_e_b_b_cutFlow->Fill("2 e & 0 #mu", 1);
-					if (getOSLeptonLeptonPair(reader, &electrons, &muons, &lepton_0, &lepton_1, "electrons") == true) { //Quality OS pair found
-						h_e_e_b_b_cutFlow->Fill("OS", 1);
-						for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
-							if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
-									&& std::abs(reader->Jet_Eta[i]) < tauEtaMax) { //Quality tau
-								taus.push_back(i);
-							}
-							if (reader->Jet_TauTag[i] == 0 && reader->Jet_BTag[i] == 1 && reader->Jet_PT[i] > bJetPTMin
-									&& std::abs(reader->Jet_Eta[i]) < bJetEtaMax) { //Quality b jet
-								bJets.push_back(i);
-							}
+		}
+		for (int i = 0; i < reader->Electron_size; i++) { //Loop through electrons
+			if (reader->Electron_PT[i] > muPTMin && std::abs(reader->Electron_Eta[i]) < muEtaMax
+					&& reader->Electron_IsolationVar[i] < muIsoMax) { //Quality electrons
+				electrons.push_back(i);
+			}
+		}
+		if (muons.size() >= 1 && electrons.size() >= 1) { //Quality muon and electron found
+			h_e_mu_b_b_cutFlow->Fill("Quality e and #mu", 1);
+			if (nMuons == 1 && nElectrons == 1) {
+				h_e_mu_b_b_cutFlow->Fill("1 e & 1 #mu", 1);
+				if (getOSLeptonLeptonPair(reader, &electrons, &muons, &lepton_0, &lepton_1, "mixed") == true) { //Quality OS pair found
+					h_e_mu_b_b_cutFlow->Fill("OS", 1);
+					for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
+						if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
+								&& std::abs(reader->Jet_Eta[i]) < tauEtaMax) { //Quality tau
+							taus.push_back(i);
 						}
-						if (bJets.size() >= 2) {//Quality b jets pairs found
-							if (selectBJets(reader, &bJets, &bJet_0, &bJet_1) == true) { //Quality b-jet pair found
-								h_e_e_b_b_cutFlow->Fill("Quality b#bar{b}", 1);
-								if (taus.size() == 0) { //No quality tau
-									h_e_e_b_b_cutFlow->Fill("0 #tau_{h}", 1);
-									v_tau_0 = getTauLepton(reader, lepton_0, "electron");
-									v_tau_1 = getTauLepton(reader, lepton_1, "electron");
-									v_higgs_tt = getHiggs2Taus(reader, v_tau_0, v_tau_1);
-									if (!massCut || (v_higgs_tt.M() >= higgsMassMin && v_higgs_tt.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
-										h_e_e_b_b_cutFlow->Fill("m_{#tau#tau} Cut", 1);
-										v_bJet_0 = getBJet(reader, bJet_0);
-										v_bJet_1 = getBJet(reader, bJet_1);
-										v_higgs_bb = getHiggs2Bs(v_bJet_0, v_bJet_1);
-										if (!massCut || (v_higgs_bb.M() >= higgsMassMin && v_higgs_bb.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
-											h_e_e_b_b_cutFlow->Fill("m_{b#bar{b}} Cut", 1);
-											gen_mctMatch = false;
-											if (options["-t"] == "1") {
-												if (!correctDecayChannel(inputs[f], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Checks if event is h->bbtautau
-												gen_mctMatch = truthCut(inputs[f], cEvent, bJet_0, bJet_1, //Checks final-state selection was correct
-														lepton_0, lepton_1, hBB, hTauTau, "electron:electron",
-														&mcTruthPlots, &v_gen_higgs_bb, &v_gen_higgs_tt,
-														&v_gen_tau_0, &v_gen_tau_1, &v_gen_bJet_0, &v_gen_bJet_1);
-											}
-											if (options["-t"] == "1" & gen_mctMatch) {
-												h_e_e_b_b_cutFlow->Fill("MC truth", 1);
-											}
-											if (debug) std::cout << "Accepted e_e_b_b event\n";
-											v_gen_diHiggs = getDiHiggs(v_gen_higgs_tt, v_gen_higgs_bb);
-											gen_t_0_pT = v_gen_tau_0.Pt();
-											gen_t_0_eta = v_gen_tau_0.Eta();
-											gen_t_0_phi = v_gen_tau_0.Phi();
-											gen_t_0_E = v_gen_tau_0.E();
-											gen_t_1_pT = v_gen_tau_1.Pt();
-											gen_t_1_eta = v_gen_tau_1.Eta();
-											gen_t_1_phi = v_gen_tau_1.Phi();
-											gen_t_1_E = v_gen_tau_1.E();
-											gen_b_0_pT = v_gen_bJet_0.Pt();
-											gen_b_0_eta = v_gen_bJet_0.Eta();
-											gen_b_0_phi = v_gen_bJet_0.Phi();
-											gen_b_0_E = v_gen_bJet_0.E();
-											gen_b_1_pT = v_gen_bJet_1.Pt();
-											gen_b_1_eta = v_gen_bJet_1.Eta();
-											gen_b_1_phi = v_gen_bJet_1.Phi();
-											gen_b_1_E = v_gen_bJet_1.E();
-											gen_diH_pT = v_gen_diHiggs.Pt();
-											gen_diH_eta = v_gen_diHiggs.Eta();
-											gen_diH_phi = v_gen_diHiggs.Phi();
-											gen_diH_E = v_gen_diHiggs.E();
-											gen_diH_mass = v_gen_diHiggs.M();
-											gen_h_bb_pT = v_gen_higgs_bb.Pt();
-											gen_h_bb_eta = v_gen_higgs_bb.Eta();
-											gen_h_bb_phi = v_gen_higgs_bb.Phi();
-											gen_h_bb_E = v_gen_higgs_bb.E();
-											gen_h_tt_pT = v_gen_higgs_tt.Pt();
-											gen_h_tt_eta = v_gen_higgs_tt.Eta();
-											gen_h_tt_phi = v_gen_higgs_tt.Phi();
-											gen_h_tt_E = v_gen_higgs_tt.E();
-											t_0_pT = v_tau_0.Pt();
-											t_0_eta = v_tau_0.Eta();
-											t_0_phi = v_tau_0.Phi();
-											t_0_mass = eMass;
-											t_1_pT = v_tau_1.Pt();
-											t_1_eta = v_tau_1.Eta();
-											t_1_phi = v_tau_1.Phi();
-											t_1_mass = eMass;
-											b_0_pT = v_bJet_0.Pt();
-											b_0_eta = v_bJet_0.Eta();
-											b_0_phi = v_bJet_0.Phi();
-											b_0_mass = v_bJet_0.M();
-											b_1_pT = v_bJet_1.Pt();
-											b_1_eta = v_bJet_1.Eta();
-											b_1_phi = v_bJet_1.Phi();
-											b_1_mass = v_bJet_1.M();
-											mPT_pT = reader->MissingET_MET[0];
-											mPT_phi = reader->MissingET_Phi[0];
-											h_tt_pT = v_higgs_tt.Pt();
-											h_tt_eta = v_higgs_tt.Eta();
-											h_tt_phi = v_higgs_tt.Phi();
-											h_tt_mass = v_higgs_tt.M();
-											h_bb_pT = v_higgs_bb.Pt();
-											h_bb_eta = v_higgs_bb.Eta();
-											h_bb_phi = v_higgs_bb.Phi();
-											h_bb_mass = v_higgs_bb.M();
-											diH_pT = v_diHiggs.Pt();
-											diH_eta = v_diHiggs.Eta();
-											diH_phi = v_diHiggs.Phi();
-											diH_mass = v_diHiggs.M();
-											getGlobalEventInfo(inputs[f], cEvent,
-													&hT, &sT, &centrality, &eVis,
-													&nJets, &nBJets, &nTauJets, &nPhotons,
-													&minJetPT, &meanJetPT, &maxJetPT,
-													&minJetMass, &meanJetMass, &maxJetMass,
-													&minJetEta, &meanJetEta, &maxJetEta,
-													&sphericityA, &spherocityA,
-													&aplanarityA, &aplanorityA,
-													&upsilonA, &dShapeA);
-											getPrimaryEventShapes(v_tau_0, v_tau_1, v_bJet_0, v_bJet_1,
-													&sphericityP, &spherocityP,
-													&aplanarityP, &aplanorityP,
-													&upsilonP, &dShapeP);
-											weight = (double)*reader->Event_Weight;
-											e_e_b_b->Fill();
-											h_datasetSizes->Fill("e e b #bar{b}", 1);
-											eventAccepted = true;
+						if (reader->Jet_TauTag[i] == 0 && reader->Jet_BTag[i] == 1 && reader->Jet_PT[i] > bJetPTMin
+								&& std::abs(reader->Jet_Eta[i]) < bJetEtaMax) { //Quality b jet
+							bJets.push_back(i);
+						}
+					}
+					if (bJets.size() >= 2) {//Quality b jets pairs found
+						if (selectBJets(reader, &bJets, &bJet_0, &bJet_1) == true) { //Quality b-jet pair found
+							h_e_mu_b_b_cutFlow->Fill("Quality b#bar{b}", 1);
+							if (taus.size() == 0) { //No quality tau
+								h_e_mu_b_b_cutFlow->Fill("0 #tau_{h}", 1);
+								v_tau_0 = getTauLepton(reader, lepton_0, "muon");
+								v_tau_1 = getTauLepton(reader, lepton_1, "electron");
+								v_higgs_tt = getHiggs2Taus(reader, v_tau_0, v_tau_1);
+								if (!massCut || (v_higgs_tt.M() >= higgsMassMin && v_higgs_tt.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
+									h_e_mu_b_b_cutFlow->Fill("m_{#tau#tau} Cut", 1);
+									v_bJet_0 = getBJet(reader, bJet_0);
+									v_bJet_1 = getBJet(reader, bJet_1);
+									v_higgs_bb = getHiggs2Bs(v_bJet_0, v_bJet_1);
+									if (!massCut || (v_higgs_bb.M() >= higgsMassMin && v_higgs_bb.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
+										h_e_mu_b_b_cutFlow->Fill("m_{b#bar{b}} Cut", 1);
+										gen_mctMatch = false;
+										if (options["-t"] == "1") {
+											if (!correctDecayChannel(inputs[f], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Checks if event is h->bbtautau
+											gen_mctMatch = truthCut(inputs[f], cEvent, bJet_0, bJet_1, //Checks final-state selection was correct
+													lepton_0, lepton_1, hBB, hTauTau, "muon:electron",
+													&mcTruthPlots, &v_gen_higgs_bb, &v_gen_higgs_tt,
+													&v_gen_tau_0, &v_gen_tau_1, &v_gen_bJet_0, &v_gen_bJet_1);
 										}
+										if (options["-t"] == "1" & gen_mctMatch) {
+											h_e_mu_b_b_cutFlow->Fill("MC truth", 1);
+										}
+										if (debug) std::cout << "Accepted e_mu_b_b event\n";
+										v_gen_diHiggs = getDiHiggs(v_gen_higgs_tt, v_gen_higgs_bb);
+										gen_t_0_pT = v_gen_tau_0.Pt();
+										gen_t_0_eta = v_gen_tau_0.Eta();
+										gen_t_0_phi = v_gen_tau_0.Phi();
+										gen_t_0_E = v_gen_tau_0.E();
+										gen_t_1_pT = v_gen_tau_1.Pt();
+										gen_t_1_eta = v_gen_tau_1.Eta();
+										gen_t_1_phi = v_gen_tau_1.Phi();
+										gen_t_1_E = v_gen_tau_1.E();
+										gen_b_0_pT = v_gen_bJet_0.Pt();
+										gen_b_0_eta = v_gen_bJet_0.Eta();
+										gen_b_0_phi = v_gen_bJet_0.Phi();
+										gen_b_0_E = v_gen_bJet_0.E();
+										gen_b_1_pT = v_gen_bJet_1.Pt();
+										gen_b_1_eta = v_gen_bJet_1.Eta();
+										gen_b_1_phi = v_gen_bJet_1.Phi();
+										gen_b_1_E = v_gen_bJet_1.E();
+										gen_diH_pT = v_gen_diHiggs.Pt();
+										gen_diH_eta = v_gen_diHiggs.Eta();
+										gen_diH_phi = v_gen_diHiggs.Phi();
+										gen_diH_E = v_gen_diHiggs.E();
+										gen_diH_mass = v_gen_diHiggs.M();
+										gen_h_bb_pT = v_gen_higgs_bb.Pt();
+										gen_h_bb_eta = v_gen_higgs_bb.Eta();
+										gen_h_bb_phi = v_gen_higgs_bb.Phi();
+										gen_h_bb_E = v_gen_higgs_bb.E();
+										gen_h_tt_pT = v_gen_higgs_tt.Pt();
+										gen_h_tt_eta = v_gen_higgs_tt.Eta();
+										gen_h_tt_phi = v_gen_higgs_tt.Phi();
+										gen_h_tt_E = v_gen_higgs_tt.E();
+										t_0_pT = v_tau_0.Pt();
+										t_0_eta = v_tau_0.Eta();
+										t_0_phi = v_tau_0.Phi();
+										t_0_mass = muMass;
+										t_1_pT = v_tau_1.Pt();
+										t_1_eta = v_tau_1.Eta();
+										t_1_phi = v_tau_1.Phi();
+										t_1_mass = eMass;
+										b_0_pT = v_bJet_0.Pt();
+										b_0_eta = v_bJet_0.Eta();
+										b_0_phi = v_bJet_0.Phi();
+										b_0_mass = v_bJet_0.M();
+										b_1_pT = v_bJet_1.Pt();
+										b_1_eta = v_bJet_1.Eta();
+										b_1_phi = v_bJet_1.Phi();
+										b_1_mass = v_bJet_1.M();
+										mPT_pT = reader->MissingET_MET[0];
+										mPT_phi = reader->MissingET_Phi[0];
+										h_tt_pT = v_higgs_tt.Pt();
+										h_tt_eta = v_higgs_tt.Eta();
+										h_tt_phi = v_higgs_tt.Phi();
+										h_tt_mass = v_higgs_tt.M();
+										h_bb_pT = v_higgs_bb.Pt();
+										h_bb_eta = v_higgs_bb.Eta();
+										h_bb_phi = v_higgs_bb.Phi();
+										h_bb_mass = v_higgs_bb.M();
+										diH_pT = v_diHiggs.Pt();
+										diH_eta = v_diHiggs.Eta();
+										diH_phi = v_diHiggs.Phi();
+										diH_mass = v_diHiggs.M();
+										getGlobalEventInfo(inputs[f], cEvent,
+												&hT, &sT, &centrality, &eVis,
+												&nJets, &nBJets, &nTauJets, &nPhotons,
+												&minJetPT, &meanJetPT, &maxJetPT,
+												&minJetMass, &meanJetMass, &maxJetMass,
+												&minJetEta, &meanJetEta, &maxJetEta,
+												&sphericityA, &spherocityA,
+												&aplanarityA, &aplanorityA,
+												&upsilonA, &dShapeA);
+										getPrimaryEventShapes(v_tau_0, v_tau_1, v_bJet_0, v_bJet_1,
+												&sphericityP, &spherocityP,
+												&aplanarityP, &aplanorityP,
+												&upsilonP, &dShapeP);
+										weight = (double)*reader->Event_Weight;
+										e_mu_b_b->Fill();
+										h_datasetSizes->Fill("e #mu b #bar{b}", 1);
+										eventAccepted = true;
 									}
 								}
 							}
@@ -2840,7 +2675,150 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					}
 				}
 			}
-			//___________________________________
+		}
+		//___________________________________
+		if (eventAccepted) continue;
+		//Check for e e b b finalstates______
+		h_e_e_b_b_cutFlow->Fill("All", 1);
+		electrons.clear();
+		muons.clear();
+		taus.clear();
+		bJets.clear();
+		finalstateSet("e_W_b_b");
+		for (int i = 0; i < reader->Electron_size; i++) { //Loop through electrons
+			if (reader->Electron_PT[i] > muPTMin && std::abs(reader->Electron_Eta[i]) < muEtaMax
+					&& reader->Electron_IsolationVar[i] < muIsoMax) { //Quality electrons
+				electrons.push_back(i);
+			}
+		}
+		if (electrons.size() >= 2) { //Quality di-electron found
+			h_e_e_b_b_cutFlow->Fill("Quality di-e", 1);
+			if (nMuons == 0 && nElectrons == 2) {
+				h_e_e_b_b_cutFlow->Fill("2 e & 0 #mu", 1);
+				if (getOSLeptonLeptonPair(reader, &electrons, &muons, &lepton_0, &lepton_1, "electrons") == true) { //Quality OS pair found
+					h_e_e_b_b_cutFlow->Fill("OS", 1);
+					for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
+						if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
+								&& std::abs(reader->Jet_Eta[i]) < tauEtaMax) { //Quality tau
+							taus.push_back(i);
+						}
+						if (reader->Jet_TauTag[i] == 0 && reader->Jet_BTag[i] == 1 && reader->Jet_PT[i] > bJetPTMin
+								&& std::abs(reader->Jet_Eta[i]) < bJetEtaMax) { //Quality b jet
+							bJets.push_back(i);
+						}
+					}
+					if (bJets.size() >= 2) {//Quality b jets pairs found
+						if (selectBJets(reader, &bJets, &bJet_0, &bJet_1) == true) { //Quality b-jet pair found
+							h_e_e_b_b_cutFlow->Fill("Quality b#bar{b}", 1);
+							if (taus.size() == 0) { //No quality tau
+								h_e_e_b_b_cutFlow->Fill("0 #tau_{h}", 1);
+								v_tau_0 = getTauLepton(reader, lepton_0, "electron");
+								v_tau_1 = getTauLepton(reader, lepton_1, "electron");
+								v_higgs_tt = getHiggs2Taus(reader, v_tau_0, v_tau_1);
+								if (!massCut || (v_higgs_tt.M() >= higgsMassMin && v_higgs_tt.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
+									h_e_e_b_b_cutFlow->Fill("m_{#tau#tau} Cut", 1);
+									v_bJet_0 = getBJet(reader, bJet_0);
+									v_bJet_1 = getBJet(reader, bJet_1);
+									v_higgs_bb = getHiggs2Bs(v_bJet_0, v_bJet_1);
+									if (!massCut || (v_higgs_bb.M() >= higgsMassMin && v_higgs_bb.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
+										h_e_e_b_b_cutFlow->Fill("m_{b#bar{b}} Cut", 1);
+										gen_mctMatch = false;
+										if (options["-t"] == "1") {
+											if (!correctDecayChannel(inputs[f], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Checks if event is h->bbtautau
+											gen_mctMatch = truthCut(inputs[f], cEvent, bJet_0, bJet_1, //Checks final-state selection was correct
+													lepton_0, lepton_1, hBB, hTauTau, "electron:electron",
+													&mcTruthPlots, &v_gen_higgs_bb, &v_gen_higgs_tt,
+													&v_gen_tau_0, &v_gen_tau_1, &v_gen_bJet_0, &v_gen_bJet_1);
+										}
+										if (options["-t"] == "1" & gen_mctMatch) {
+											h_e_e_b_b_cutFlow->Fill("MC truth", 1);
+										}
+										if (debug) std::cout << "Accepted e_e_b_b event\n";
+										v_gen_diHiggs = getDiHiggs(v_gen_higgs_tt, v_gen_higgs_bb);
+										gen_t_0_pT = v_gen_tau_0.Pt();
+										gen_t_0_eta = v_gen_tau_0.Eta();
+										gen_t_0_phi = v_gen_tau_0.Phi();
+										gen_t_0_E = v_gen_tau_0.E();
+										gen_t_1_pT = v_gen_tau_1.Pt();
+										gen_t_1_eta = v_gen_tau_1.Eta();
+										gen_t_1_phi = v_gen_tau_1.Phi();
+										gen_t_1_E = v_gen_tau_1.E();
+										gen_b_0_pT = v_gen_bJet_0.Pt();
+										gen_b_0_eta = v_gen_bJet_0.Eta();
+										gen_b_0_phi = v_gen_bJet_0.Phi();
+										gen_b_0_E = v_gen_bJet_0.E();
+										gen_b_1_pT = v_gen_bJet_1.Pt();
+										gen_b_1_eta = v_gen_bJet_1.Eta();
+										gen_b_1_phi = v_gen_bJet_1.Phi();
+										gen_b_1_E = v_gen_bJet_1.E();
+										gen_diH_pT = v_gen_diHiggs.Pt();
+										gen_diH_eta = v_gen_diHiggs.Eta();
+										gen_diH_phi = v_gen_diHiggs.Phi();
+										gen_diH_E = v_gen_diHiggs.E();
+										gen_diH_mass = v_gen_diHiggs.M();
+										gen_h_bb_pT = v_gen_higgs_bb.Pt();
+										gen_h_bb_eta = v_gen_higgs_bb.Eta();
+										gen_h_bb_phi = v_gen_higgs_bb.Phi();
+										gen_h_bb_E = v_gen_higgs_bb.E();
+										gen_h_tt_pT = v_gen_higgs_tt.Pt();
+										gen_h_tt_eta = v_gen_higgs_tt.Eta();
+										gen_h_tt_phi = v_gen_higgs_tt.Phi();
+										gen_h_tt_E = v_gen_higgs_tt.E();
+										t_0_pT = v_tau_0.Pt();
+										t_0_eta = v_tau_0.Eta();
+										t_0_phi = v_tau_0.Phi();
+										t_0_mass = eMass;
+										t_1_pT = v_tau_1.Pt();
+										t_1_eta = v_tau_1.Eta();
+										t_1_phi = v_tau_1.Phi();
+										t_1_mass = eMass;
+										b_0_pT = v_bJet_0.Pt();
+										b_0_eta = v_bJet_0.Eta();
+										b_0_phi = v_bJet_0.Phi();
+										b_0_mass = v_bJet_0.M();
+										b_1_pT = v_bJet_1.Pt();
+										b_1_eta = v_bJet_1.Eta();
+										b_1_phi = v_bJet_1.Phi();
+										b_1_mass = v_bJet_1.M();
+										mPT_pT = reader->MissingET_MET[0];
+										mPT_phi = reader->MissingET_Phi[0];
+										h_tt_pT = v_higgs_tt.Pt();
+										h_tt_eta = v_higgs_tt.Eta();
+										h_tt_phi = v_higgs_tt.Phi();
+										h_tt_mass = v_higgs_tt.M();
+										h_bb_pT = v_higgs_bb.Pt();
+										h_bb_eta = v_higgs_bb.Eta();
+										h_bb_phi = v_higgs_bb.Phi();
+										h_bb_mass = v_higgs_bb.M();
+										diH_pT = v_diHiggs.Pt();
+										diH_eta = v_diHiggs.Eta();
+										diH_phi = v_diHiggs.Phi();
+										diH_mass = v_diHiggs.M();
+										getGlobalEventInfo(inputs[f], cEvent,
+												&hT, &sT, &centrality, &eVis,
+												&nJets, &nBJets, &nTauJets, &nPhotons,
+												&minJetPT, &meanJetPT, &maxJetPT,
+												&minJetMass, &meanJetMass, &maxJetMass,
+												&minJetEta, &meanJetEta, &maxJetEta,
+												&sphericityA, &spherocityA,
+												&aplanarityA, &aplanorityA,
+												&upsilonA, &dShapeA);
+										getPrimaryEventShapes(v_tau_0, v_tau_1, v_bJet_0, v_bJet_1,
+												&sphericityP, &spherocityP,
+												&aplanarityP, &aplanorityP,
+												&upsilonP, &dShapeP);
+										weight = (double)*reader->Event_Weight;
+										e_e_b_b->Fill();
+										h_datasetSizes->Fill("e e b #bar{b}", 1);
+										eventAccepted = true;
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		//___________________________________
 		}
 		std::cout << "Event loop complete\n";
 		eventTree->Delete();
