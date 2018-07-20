@@ -15,6 +15,16 @@
 // Header file for the classes stored in the TTree if any.
 #include <TClonesArray.h>
 #include <TObject.h>
+#include "TClonesArray.h"
+#include "TObject.h"
+#include "classes/DelphesClasses.h"
+#include "classes/DelphesFactory.h"
+#include "classes/DelphesFormula.h"
+#include "ExRootAnalysis/ExRootResult.h"
+#include "ExRootAnalysis/ExRootFilter.h"
+#include "ExRootAnalysis/ExRootClassifier.h"
+#include "TVector3.h"
+#include "TLorentzVector.h"
 
 class delphesReader {
 public :
