@@ -652,7 +652,7 @@ void getEventShapes(std::vector<double> sphericityV, std::vector<double> spheroc
 
 void getGlobalEventInfo(std::string input, Long64_t cEvent,
 		double*  hT, double*  sT, double* centrality, double* eVis,
-		int* nJets, int* nBJets, int* nTauJets, int* nPhotons,
+		int* nJets, int* nBJets, int* nTauJets,
 		double* minJetPT, double* meanJetPT, double* maxJetPT,
 		double* minJetMass, double* meanJetMass, double* maxJetMass,
 		double* minJetEta, double* meanJetEta, double* maxJetEta,
@@ -666,7 +666,6 @@ void getGlobalEventInfo(std::string input, Long64_t cEvent,
 	chain->Add(input.c_str());
 	ExRootTreeReader *treeReader = new ExRootTreeReader(chain);
 	TClonesArray *branchElectron = treeReader->UseBranch("Electron");
-	TClonesArray *branchPhoton = treeReader->UseBranch("Photon");
 	TClonesArray *branchMuon = treeReader->UseBranch("Muon");
 	TClonesArray *branchJet = treeReader->UseBranch("Jet");
 	TClonesArray *branchMissingET = treeReader->UseBranch("MissingET");
@@ -681,7 +680,6 @@ void getGlobalEventInfo(std::string input, Long64_t cEvent,
 	*nJets = 0;
 	*nBJets = 0;
 	*nTauJets = 0;
-	*nPhotons = 0;
 	*minJetPT = -1;
 	*meanJetPT = 0;
 	*maxJetPT = -1;
@@ -703,7 +701,6 @@ void getGlobalEventInfo(std::string input, Long64_t cEvent,
 	Muon* muon;
 	Jet* jet;
 	MissingET* mPT;
-	Photon* photon;
 	TMatrixD sphericityT(3, 3), spherocityT(3, 3);
 	double sphericityD = 0, spherocityD = 0;
 	//___________________________________________
@@ -715,16 +712,6 @@ void getGlobalEventInfo(std::string input, Long64_t cEvent,
 		*centrality += electron->PT;
 		appendSphericity(&sphericityT, &sphericityD, electron->P4());
 		appendSpherocity(&spherocityT, &spherocityD, electron->P4());
-	}
-	for (int i = 0; i < branchPhoton->GetEntriesFast(); ++i) { //Loop over all photons in event
-		photon = (Photon*)branchPhoton->At(i);
-		if (photon->Particles.GetEntriesFast() != 1) continue; //Skip photons with references to multiple particles
-		*nPhotons += 1;
-		*sT += photon->PT;
-		*eVis += photon->P4().E();
-		*centrality += photon->PT;
-		appendSphericity(&sphericityT, &sphericityD, photon->P4());
-		appendSpherocity(&spherocityT, &spherocityD, photon->P4());
 	}
 	for (int i = 0; i < branchMuon->GetEntriesFast(); ++i) { //Loop over all muons in event
 		muon = (Muon*)branchMuon->At(i);
@@ -1015,7 +1002,6 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	double minJetPT, meanJetPT, maxJetPT; //Global jet pTs
 	double minJetMass, meanJetMass, maxJetMass; //Global jet masses
 	double minJetEta, meanJetEta, maxJetEta; //Global jet etas
-	int nPhotons;
 	double sphericityA, spherocityA, aplanarityA, aplanorityA, upsilonA, dShapeA; //Event shapes for all objects
 	double sphericityP, spherocityP, aplanarityP, aplanorityP, upsilonP, dShapeP; //Event shapes for primary objects
 	//___________________________________________
@@ -1079,7 +1065,6 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	e_tau_b_b->Branch("minJetEta", &minJetEta);
 	e_tau_b_b->Branch("meanJetEta", &meanJetEta);
 	e_tau_b_b->Branch("maxJetEta", &maxJetEta);
-	e_tau_b_b->Branch("nPhotons", &nPhotons);
 	e_tau_b_b->Branch("sphericityA", &sphericityA);
 	e_tau_b_b->Branch("spherocityA", &spherocityA);
 	e_tau_b_b->Branch("aplanarityA", &aplanarityA);
@@ -1170,7 +1155,6 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	mu_tau_b_b->Branch("minJetEta", &minJetEta);
 	mu_tau_b_b->Branch("meanJetEta", &meanJetEta);
 	mu_tau_b_b->Branch("maxJetEta", &maxJetEta);
-	mu_tau_b_b->Branch("nPhotons", &nPhotons);
 	mu_tau_b_b->Branch("sphericityA", &sphericityA);
 	mu_tau_b_b->Branch("spherocityA", &spherocityA);
 	mu_tau_b_b->Branch("aplanarityA", &aplanarityA);
@@ -1261,7 +1245,6 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	tau_tau_b_b->Branch("minJetEta", &minJetEta);
 	tau_tau_b_b->Branch("meanJetEta", &meanJetEta);
 	tau_tau_b_b->Branch("maxJetEta", &maxJetEta);
-	tau_tau_b_b->Branch("nPhotons", &nPhotons);
 	tau_tau_b_b->Branch("sphericityA", &sphericityA);
 	tau_tau_b_b->Branch("spherocityA", &spherocityA);
 	tau_tau_b_b->Branch("aplanarityA", &aplanarityA);
@@ -1352,7 +1335,6 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	e_e_b_b->Branch("minJetEta", &minJetEta);
 	e_e_b_b->Branch("meanJetEta", &meanJetEta);
 	e_e_b_b->Branch("maxJetEta", &maxJetEta);
-	e_e_b_b->Branch("nPhotons", &nPhotons);
 	e_e_b_b->Branch("sphericityA", &sphericityA);
 	e_e_b_b->Branch("spherocityA", &spherocityA);
 	e_e_b_b->Branch("aplanarityA", &aplanarityA);
@@ -1443,7 +1425,6 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	mu_mu_b_b->Branch("minJetEta", &minJetEta);
 	mu_mu_b_b->Branch("meanJetEta", &meanJetEta);
 	mu_mu_b_b->Branch("maxJetEta", &maxJetEta);
-	mu_mu_b_b->Branch("nPhotons", &nPhotons);
 	mu_mu_b_b->Branch("sphericityA", &sphericityA);
 	mu_mu_b_b->Branch("spherocityA", &spherocityA);
 	mu_mu_b_b->Branch("aplanarityA", &aplanarityA);
@@ -1534,7 +1515,6 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	e_mu_b_b->Branch("minJetEta", &minJetEta);
 	e_mu_b_b->Branch("meanJetEta", &meanJetEta);
 	e_mu_b_b->Branch("maxJetEta", &maxJetEta);
-	e_mu_b_b->Branch("nPhotons", &nPhotons);
 	e_mu_b_b->Branch("sphericityA", &sphericityA);
 	e_mu_b_b->Branch("spherocityA", &spherocityA);
 	e_mu_b_b->Branch("aplanarityA", &aplanarityA);
@@ -1839,7 +1819,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 										diH_mass = v_diHiggs.M();
 										getGlobalEventInfo(options["-i"], cEvent,
 												&hT, &sT, &centrality, &eVis,
-												&nJets, &nBJets, &nTauJets, &nPhotons,
+												&nJets, &nBJets, &nTauJets,
 												&minJetPT, &meanJetPT, &maxJetPT,
 												&minJetMass, &meanJetMass, &maxJetMass,
 												&minJetEta, &meanJetEta, &maxJetEta,
@@ -1982,7 +1962,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 										diH_mass = v_diHiggs.M();
 										getGlobalEventInfo(options["-i"], cEvent,
 												&hT, &sT, &centrality, &eVis,
-												&nJets, &nBJets, &nTauJets, &nPhotons,
+												&nJets, &nBJets, &nTauJets,
 												&minJetPT, &meanJetPT, &maxJetPT,
 												&minJetMass, &meanJetMass, &maxJetMass,
 												&minJetEta, &meanJetEta, &maxJetEta,
@@ -2120,7 +2100,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 									diH_mass = v_diHiggs.M();
 									getGlobalEventInfo(options["-i"], cEvent,
 											&hT, &sT, &centrality, &eVis,
-											&nJets, &nBJets, &nTauJets, &nPhotons,
+											&nJets, &nBJets, &nTauJets,
 											&minJetPT, &meanJetPT, &maxJetPT,
 											&minJetMass, &meanJetMass, &maxJetMass,
 											&minJetEta, &meanJetEta, &maxJetEta,
@@ -2262,7 +2242,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 										diH_mass = v_diHiggs.M();
 										getGlobalEventInfo(options["-i"], cEvent,
 												&hT, &sT, &centrality, &eVis,
-												&nJets, &nBJets, &nTauJets, &nPhotons,
+												&nJets, &nBJets, &nTauJets,
 												&minJetPT, &meanJetPT, &maxJetPT,
 												&minJetMass, &meanJetMass, &maxJetMass,
 												&minJetEta, &meanJetEta, &maxJetEta,
@@ -2411,7 +2391,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 										diH_mass = v_diHiggs.M();
 										getGlobalEventInfo(options["-i"], cEvent,
 												&hT, &sT, &centrality, &eVis,
-												&nJets, &nBJets, &nTauJets, &nPhotons,
+												&nJets, &nBJets, &nTauJets,
 												&minJetPT, &meanJetPT, &maxJetPT,
 												&minJetMass, &meanJetMass, &maxJetMass,
 												&minJetEta, &meanJetEta, &maxJetEta,
@@ -2554,7 +2534,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 										diH_mass = v_diHiggs.M();
 										getGlobalEventInfo(options["-i"], cEvent,
 												&hT, &sT, &centrality, &eVis,
-												&nJets, &nBJets, &nTauJets, &nPhotons,
+												&nJets, &nBJets, &nTauJets,
 												&minJetPT, &meanJetPT, &maxJetPT,
 												&minJetMass, &meanJetMass, &maxJetMass,
 												&minJetEta, &meanJetEta, &maxJetEta,
