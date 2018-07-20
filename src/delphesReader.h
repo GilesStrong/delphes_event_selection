@@ -37,7 +37,7 @@ const Int_t kMaxJet = 20;
 const Int_t kMaxGenMissingET = 1;
 const Int_t kMaxElectron = 5;
 const Int_t kMaxPhoton = 5;
-const Int_t kMaxMuonLoose = 5;
+const Int_t kMaxMuon = 5;
 const Int_t kMaxMissingET = 1;
 const Int_t kMaxScalarHT = 1;
 
@@ -188,22 +188,22 @@ public :
 	Float_t         Electron_SumPtChargedPU[kMaxElectron];   //[Electron_]
 	Float_t         Electron_SumPt[kMaxElectron];   //[Electron_]
 	Int_t           Electron_size;
-	Int_t           MuonLoose_;
-	UInt_t          MuonLoose_fUniqueID[kMaxMuonLoose];   //[MuonLoose_]
-	UInt_t          MuonLoose_fBits[kMaxMuonLoose];   //[MuonLoose_]
-	Float_t         MuonLoose_PT[kMaxMuonLoose];   //[MuonLoose_]
-	Float_t         MuonLoose_Eta[kMaxMuonLoose];   //[MuonLoose_]
-	Float_t         MuonLoose_Phi[kMaxMuonLoose];   //[MuonLoose_]
-	Float_t         MuonLoose_T[kMaxMuonLoose];   //[MuonLoose_]
-	Int_t           MuonLoose_Charge[kMaxMuonLoose];   //[MuonLoose_]
-	TRef            MuonLoose_Particle[kMaxMuonLoose];
-	Float_t         MuonLoose_IsolationVar[kMaxMuonLoose];   //[MuonLoose_]
-	Float_t         MuonLoose_IsolationVarRhoCorr[kMaxMuonLoose];   //[MuonLoose_]
-	Float_t         MuonLoose_SumPtCharged[kMaxMuonLoose];   //[MuonLoose_]
-	Float_t         MuonLoose_SumPtNeutral[kMaxMuonLoose];   //[MuonLoose_]
-	Float_t         MuonLoose_SumPtChargedPU[kMaxMuonLoose];   //[MuonLoose_]
-	Float_t         MuonLoose_SumPt[kMaxMuonLoose];   //[MuonLoose_]
-	Int_t           MuonLoose_size;
+	Int_t           Muon_;
+	UInt_t          Muon_fUniqueID[kMaxMuon];   //[Muon_]
+	UInt_t          Muon_fBits[kMaxMuon];   //[Muon_]
+	Float_t         Muon_PT[kMaxMuon];   //[Muon_]
+	Float_t         Muon_Eta[kMaxMuon];   //[Muon_]
+	Float_t         Muon_Phi[kMaxMuon];   //[Muon_]
+	Float_t         Muon_T[kMaxMuon];   //[Muon_]
+	Int_t           Muon_Charge[kMaxMuon];   //[Muon_]
+	TRef            Muon_Particle[kMaxMuon];
+	Float_t         Muon_IsolationVar[kMaxMuon];   //[Muon_]
+	Float_t         Muon_IsolationVarRhoCorr[kMaxMuon];   //[Muon_]
+	Float_t         Muon_SumPtCharged[kMaxMuon];   //[Muon_]
+	Float_t         Muon_SumPtNeutral[kMaxMuon];   //[Muon_]
+	Float_t         Muon_SumPtChargedPU[kMaxMuon];   //[Muon_]
+	Float_t         Muon_SumPt[kMaxMuon];   //[Muon_]
+	Int_t           Muon_size;
 	Int_t           MissingET_;
 	UInt_t          MissingET_fUniqueID[kMaxMissingET];   //[MissingET_]
 	UInt_t          MissingET_fBits[kMaxMissingET];   //[MissingET_]
