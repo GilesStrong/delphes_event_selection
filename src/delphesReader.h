@@ -263,98 +263,6 @@ public :
 	TBranch        *b_Particle_Y;   //!
 	TBranch        *b_Particle_Z;   //!
 	TBranch        *b_Particle_size;   //!
-	TBranch        *b_Track_;   //!
-	TBranch        *b_Track_fUniqueID;   //!
-	TBranch        *b_Track_fBits;   //!
-	TBranch        *b_Track_PID;   //!
-	TBranch        *b_Track_Charge;   //!
-	TBranch        *b_Track_PT;   //!
-	TBranch        *b_Track_Eta;   //!
-	TBranch        *b_Track_Phi;   //!
-	TBranch        *b_Track_EtaOuter;   //!
-	TBranch        *b_Track_PhiOuter;   //!
-	TBranch        *b_Track_X;   //!
-	TBranch        *b_Track_Y;   //!
-	TBranch        *b_Track_Z;   //!
-	TBranch        *b_Track_T;   //!
-	TBranch        *b_Track_XOuter;   //!
-	TBranch        *b_Track_YOuter;   //!
-	TBranch        *b_Track_ZOuter;   //!
-	TBranch        *b_Track_TOuter;   //!
-	TBranch        *b_Track_Dxy;   //!
-	TBranch        *b_Track_SDxy;   //!
-	TBranch        *b_Track_Xd;   //!
-	TBranch        *b_Track_Yd;   //!
-	TBranch        *b_Track_Zd;   //!
-	TBranch        *b_Track_Particle;   //!
-	TBranch        *b_Track_size;   //!
-	TBranch        *b_Tower_;   //!
-	TBranch        *b_Tower_fUniqueID;   //!
-	TBranch        *b_Tower_fBits;   //!
-	TBranch        *b_Tower_ET;   //!
-	TBranch        *b_Tower_Eta;   //!
-	TBranch        *b_Tower_Phi;   //!
-	TBranch        *b_Tower_E;   //!
-	TBranch        *b_Tower_T;   //!
-	TBranch        *b_Tower_NTimeHits;   //!
-	TBranch        *b_Tower_Eem;   //!
-	TBranch        *b_Tower_Ehad;   //!
-	TBranch        *b_Tower_Edges;   //!
-	TBranch        *b_Tower_Particles;   //!
-	TBranch        *b_Tower_size;   //!
-	TBranch        *b_EFlowTrack_;   //!
-	TBranch        *b_EFlowTrack_fUniqueID;   //!
-	TBranch        *b_EFlowTrack_fBits;   //!
-	TBranch        *b_EFlowTrack_PID;   //!
-	TBranch        *b_EFlowTrack_Charge;   //!
-	TBranch        *b_EFlowTrack_PT;   //!
-	TBranch        *b_EFlowTrack_Eta;   //!
-	TBranch        *b_EFlowTrack_Phi;   //!
-	TBranch        *b_EFlowTrack_EtaOuter;   //!
-	TBranch        *b_EFlowTrack_PhiOuter;   //!
-	TBranch        *b_EFlowTrack_X;   //!
-	TBranch        *b_EFlowTrack_Y;   //!
-	TBranch        *b_EFlowTrack_Z;   //!
-	TBranch        *b_EFlowTrack_T;   //!
-	TBranch        *b_EFlowTrack_XOuter;   //!
-	TBranch        *b_EFlowTrack_YOuter;   //!
-	TBranch        *b_EFlowTrack_ZOuter;   //!
-	TBranch        *b_EFlowTrack_TOuter;   //!
-	TBranch        *b_EFlowTrack_Dxy;   //!
-	TBranch        *b_EFlowTrack_SDxy;   //!
-	TBranch        *b_EFlowTrack_Xd;   //!
-	TBranch        *b_EFlowTrack_Yd;   //!
-	TBranch        *b_EFlowTrack_Zd;   //!
-	TBranch        *b_EFlowTrack_Particle;   //!
-	TBranch        *b_EFlowTrack_size;   //!
-	TBranch        *b_EFlowPhoton_;   //!
-	TBranch        *b_EFlowPhoton_fUniqueID;   //!
-	TBranch        *b_EFlowPhoton_fBits;   //!
-	TBranch        *b_EFlowPhoton_ET;   //!
-	TBranch        *b_EFlowPhoton_Eta;   //!
-	TBranch        *b_EFlowPhoton_Phi;   //!
-	TBranch        *b_EFlowPhoton_E;   //!
-	TBranch        *b_EFlowPhoton_T;   //!
-	TBranch        *b_EFlowPhoton_NTimeHits;   //!
-	TBranch        *b_EFlowPhoton_Eem;   //!
-	TBranch        *b_EFlowPhoton_Ehad;   //!
-	TBranch        *b_EFlowPhoton_Edges;   //!
-	TBranch        *b_EFlowPhoton_Particles;   //!
-	TBranch        *b_EFlowPhoton_size;   //!
-	TBranch        *b_EFlowNeutralHadron_;   //!
-	TBranch        *b_EFlowNeutralHadron_fUniqueID;   //!
-	TBranch        *b_EFlowNeutralHadron_fBits;   //!
-	TBranch        *b_EFlowNeutralHadron_ET;   //!
-	TBranch        *b_EFlowNeutralHadron_Eta;   //!
-	TBranch        *b_EFlowNeutralHadron_Phi;   //!
-	TBranch        *b_EFlowNeutralHadron_E;   //!
-	TBranch        *b_EFlowNeutralHadron_T;   //!
-	TBranch        *b_EFlowNeutralHadron_NTimeHits;   //!
-	TBranch        *b_EFlowNeutralHadron_Eem;   //!
-	TBranch        *b_EFlowNeutralHadron_Ehad;   //!
-	TBranch        *b_EFlowNeutralHadron_Edges;   //!
-	TBranch        *b_EFlowNeutralHadron_Particles;   //!
-	TBranch        *b_EFlowNeutralHadron_size;   //!
 	TBranch        *b_GenJet_;   //!
 	TBranch        *b_GenJet_fUniqueID;   //!
 	TBranch        *b_GenJet_fBits;   //!
@@ -390,14 +298,6 @@ public :
 	TBranch        *b_GenJet_NSubJetsSoftDropped;   //!
 	TBranch        *b_GenJet_Constituents;   //!
 	TBranch        *b_GenJet_Particles;   //!
-	TBranch        *b_GenJet_Area_fUniqueID;   //!
-	TBranch        *b_GenJet_Area_fBits;   //!
-	TBranch        *b_GenJet_Area_fP_fUniqueID;   //!
-	TBranch        *b_GenJet_Area_fP_fBits;   //!
-	TBranch        *b_GenJet_Area_fP_fX;   //!
-	TBranch        *b_GenJet_Area_fP_fY;   //!
-	TBranch        *b_GenJet_Area_fP_fZ;   //!
-	TBranch        *b_GenJet_Area_fE;   //!
 	TBranch        *b_GenJet_size;   //!
 	TBranch        *b_GenMissingET_;   //!
 	TBranch        *b_GenMissingET_fUniqueID;   //!
@@ -441,14 +341,6 @@ public :
 	TBranch        *b_Jet_NSubJetsSoftDropped;   //!
 	TBranch        *b_Jet_Constituents;   //!
 	TBranch        *b_Jet_Particles;   //!
-	TBranch        *b_Jet_Area_fUniqueID;   //!
-	TBranch        *b_Jet_Area_fBits;   //!
-	TBranch        *b_Jet_Area_fP_fUniqueID;   //!
-	TBranch        *b_Jet_Area_fP_fBits;   //!
-	TBranch        *b_Jet_Area_fP_fX;   //!
-	TBranch        *b_Jet_Area_fP_fY;   //!
-	TBranch        *b_Jet_Area_fP_fZ;   //!
-	TBranch        *b_Jet_Area_fE;   //!
 	TBranch        *b_Jet_size;   //!
 	TBranch        *b_Electron_;   //!
 	TBranch        *b_Electron_fUniqueID;   //!
@@ -484,22 +376,22 @@ public :
 	TBranch        *b_Photon_SumPtChargedPU;   //!
 	TBranch        *b_Photon_SumPt;   //!
 	TBranch        *b_Photon_size;   //!
-	TBranch        *b_MuonLoose_;   //!
-	TBranch        *b_MuonLoose_fUniqueID;   //!
-	TBranch        *b_MuonLoose_fBits;   //!
-	TBranch        *b_MuonLoose_PT;   //!
-	TBranch        *b_MuonLoose_Eta;   //!
-	TBranch        *b_MuonLoose_Phi;   //!
-	TBranch        *b_MuonLoose_T;   //!
-	TBranch        *b_MuonLoose_Charge;   //!
-	TBranch        *b_MuonLoose_Particle;   //!
-	TBranch        *b_MuonLoose_IsolationVar;   //!
-	TBranch        *b_MuonLoose_IsolationVarRhoCorr;   //!
-	TBranch        *b_MuonLoose_SumPtCharged;   //!
-	TBranch        *b_MuonLoose_SumPtNeutral;   //!
-	TBranch        *b_MuonLoose_SumPtChargedPU;   //!
-	TBranch        *b_MuonLoose_SumPt;   //!
-	TBranch        *b_MuonLoose_size;   //!
+	TBranch        *b_Muon_;   //!
+	TBranch        *b_Muon_fUniqueID;   //!
+	TBranch        *b_Muon_fBits;   //!
+	TBranch        *b_Muon_PT;   //!
+	TBranch        *b_Muon_Eta;   //!
+	TBranch        *b_Muon_Phi;   //!
+	TBranch        *b_Muon_T;   //!
+	TBranch        *b_Muon_Charge;   //!
+	TBranch        *b_Muon_Particle;   //!
+	TBranch        *b_Muon_IsolationVar;   //!
+	TBranch        *b_Muon_IsolationVarRhoCorr;   //!
+	TBranch        *b_Muon_SumPtCharged;   //!
+	TBranch        *b_Muon_SumPtNeutral;   //!
+	TBranch        *b_Muon_SumPtChargedPU;   //!
+	TBranch        *b_Muon_SumPt;   //!
+	TBranch        *b_Muon_size;   //!
 	TBranch        *b_MissingET_;   //!
 	TBranch        *b_MissingET_fUniqueID;   //!
 	TBranch        *b_MissingET_fBits;   //!
