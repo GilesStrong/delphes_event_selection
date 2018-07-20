@@ -33,6 +33,17 @@ Int_t delphesReader::GetEntry(Long64_t entry) {
 	return fChain->GetEntry(entry);
 }
 
+Long64_t delphesReader::LoadTree(Long64_t entry) {
+   // Set the environment to read one entry
+   if (!fChain) return -5;
+   Long64_t centry = fChain->LoadTree(entry);
+   if (centry < 0) return centry;
+   if (fChain->GetTreeNumber() != fCurrent) {
+      fCurrent = fChain->GetTreeNumber();
+      Notify();
+   }
+   return centry;
+}
 
 void delphesReader::Init(TTree *tree)
 {
