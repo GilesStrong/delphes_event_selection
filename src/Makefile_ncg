@@ -1,7 +1,7 @@
 PREFIX=/exper-sw/cmst3/cmssw/users/giles/programs/
 ROOTCFLAGS=$(shell $(PREFIX)bin/root-config --cflags)
 ROOTLIBS=$(shell $(PREFIX)bin/root-config --libs)
-DELPHES=$(PREFIX)Delphes-3.3.2/
+DELPHES=$(PREFIX)Delphes-3.4.1/
 C++ = g++
 C_FLAGS = -g
 INCLUDES = -I$(PREFIX)/include -I$(DELPHES) -I$(DELPHES)/external
