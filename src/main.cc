@@ -1687,8 +1687,11 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	TLorentzVector v_gen_higgs_bb, v_gen_higgs_tt, v_gen_diHiggs, v_gen_tau_0, v_gen_tau_1, v_gen_bJet_0, v_gen_bJet_1;
 	std::cout << "Beginning event loop\n";
 	for (Long64_t cEvent = 0; cEvent < nEvents; cEvent++) {
+		if (debug) std::cout << "Loading event " << cEvent << "\n";
 		Long64_t nEvent = reader->LoadTree(cEvent); //Load next event
+		if (debug) std::cout << "Event loaded, getting data\n";
 		reader->fChain->GetEntry(cEvent);
+		if (debug) std::cout << "Data loaded\n";
 		if (nEvent < 0) break; //Load next event
 		if (cEvent % 1000 == 0) std::cout << "Loop: " << cEvent << "/" << nEvents << ", " <<
 				100*cEvent/nEvents << "%\n";
