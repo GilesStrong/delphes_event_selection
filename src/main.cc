@@ -1698,10 +1698,10 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 		/*if (options["-t"] == "1") {
 			if (!correctDecayChannel(options["-i"], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Event is not h->bbtautau
 		}*/
-		if (options["-d"] != 0) std::cout << "Getting electrons and muons\n";
+		if (debug) std::cout << "Getting electrons and muons\n";
 		nElectrons = getNElectrons(reader);
 		nMuons = getNMuons(reader);
-		if (options["-d"] != 0) std::cout << nElectrons << " electrons " << nMuons << " muons\n";
+		if (debug) std::cout << nElectrons << " electrons " << nMuons << " muons\n";
 		//Check for mu tau b b finalstates___
 		h_mu_tau_b_b_cutFlow->Fill("All", 1);
 		electrons.clear();
@@ -1709,7 +1709,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 		taus.clear();
 		bJets.clear();
 		finalstateSet("mu_tau_b_b");
-		if (options["-d"] != 0) std::cout << "Running mu tau b b\n";
+		if (debug) std::cout << "Running mu tau b b\n";
 		for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
 			if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
 					&& std::abs(reader->Jet_Eta[i]) < tauEtaMax) { //Quality tau
