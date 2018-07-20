@@ -188,6 +188,23 @@ public :
 	Float_t         Electron_SumPtChargedPU[kMaxElectron];   //[Electron_]
 	Float_t         Electron_SumPt[kMaxElectron];   //[Electron_]
 	Int_t           Electron_size;
+	Int_t           Photon_;
+	UInt_t          Photon_fUniqueID[kMaxPhoton];   //[Photon_]
+	UInt_t          Photon_fBits[kMaxPhoton];   //[Photon_]
+	Float_t         Photon_PT[kMaxPhoton];   //[Photon_]
+	Float_t         Photon_Eta[kMaxPhoton];   //[Photon_]
+	Float_t         Photon_Phi[kMaxPhoton];   //[Photon_]
+	Float_t         Photon_E[kMaxPhoton];   //[Photon_]
+	Float_t         Photon_T[kMaxPhoton];   //[Photon_]
+	Float_t         Photon_EhadOverEem[kMaxPhoton];   //[Photon_]
+	TRefArray       Photon_Particles[kMaxPhoton];
+	Float_t         Photon_IsolationVar[kMaxPhoton];   //[Photon_]
+	Float_t         Photon_IsolationVarRhoCorr[kMaxPhoton];   //[Photon_]
+	Float_t         Photon_SumPtCharged[kMaxPhoton];   //[Photon_]
+	Float_t         Photon_SumPtNeutral[kMaxPhoton];   //[Photon_]
+	Float_t         Photon_SumPtChargedPU[kMaxPhoton];   //[Photon_]
+	Float_t         Photon_SumPt[kMaxPhoton];   //[Photon_]
+	Int_t           Photon_size;
 	Int_t           Muon_;
 	UInt_t          Muon_fUniqueID[kMaxMuon];   //[Muon_]
 	UInt_t          Muon_fBits[kMaxMuon];   //[Muon_]
