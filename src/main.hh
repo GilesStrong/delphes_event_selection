@@ -19,6 +19,9 @@
 #include "delphesReader.h"
 #include "classes/DelphesClasses.h"
 #include "ExRootAnalysis/ExRootTreeReader.h"
+#include "ExRootAnalysis/ExRootResult.h"
+#include "ExRootAnalysis/ExRootFilter.h"
+#include "ExRootAnalysis/ExRootClassifier.h"
 #include "finalstateCuts.hh"
 //Root
 #include "TROOT.h"
