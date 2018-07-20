@@ -1857,6 +1857,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 		taus.clear();
 		bJets.clear();
 		finalstateSet("e_tau_b_b");
+		if (debug) std::cout << "Running e tau b b\n";
 		for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
 			if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
 					&& std::abs(reader->Jet_Eta[i]) < tauEtaMax) { //Quality tau
@@ -2000,6 +2001,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 		taus.clear();
 		bJets.clear();
 		finalstateSet("tau_tau_b_b");
+		if (debug) std::cout << "Running tau tau b b\n";
 		for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
 			if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
 					&& std::abs(reader->Jet_Eta[i]) < tauEtaMax) { //Quality tau
