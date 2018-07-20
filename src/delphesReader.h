@@ -26,36 +26,36 @@
 #include "TVector3.h"
 #include "TLorentzVector.h"
 
+// Fixed size dimensions of array or collections stored in the TTree if any.
+const Int_t kMaxEvent = 1;
+const Int_t kMaxWeight = 919;
+const Int_t kMaxParticle = 611;
+const Int_t kMaxVertex = 258;
+const Int_t kMaxGenJet = 17;
+const Int_t kMaxGenJetAK8 = 5;
+const Int_t kMaxGenMissingET = 1;
+const Int_t kMaxPhotonLoose = 7;
+const Int_t kMaxPhotonTight = 5;
+const Int_t kMaxElectron = 4;
+const Int_t kMaxMuonLoose = 14;
+const Int_t kMaxMuonTight = 4;
+const Int_t kMaxElectronCHS = 29;
+const Int_t kMaxMuonLooseCHS = 14;
+const Int_t kMaxMuonTightCHS = 5;
+const Int_t kMaxJet = 28;
+const Int_t kMaxJetPUPPI = 15;
+const Int_t kMaxJetAK8 = 15;
+const Int_t kMaxJetPUPPIAK8 = 5;
+const Int_t kMaxRho = 5;
+const Int_t kMaxMissingET = 1;
+const Int_t kMaxPuppiMissingET = 1;
+const Int_t kMaxGenPileUpMissingET = 1;
+const Int_t kMaxScalarHT = 1;
+
 class delphesReader {
 public :
    TTree          *fChain;   //!pointer to the analyzed TTree or TChain
    Int_t           fCurrent; //!current Tree number in a TChain
-
-// Fixed size dimensions of array or collections stored in the TTree if any.
-   const Int_t kMaxEvent = 1;
-   const Int_t kMaxWeight = 919;
-   const Int_t kMaxParticle = 611;
-   const Int_t kMaxVertex = 258;
-   const Int_t kMaxGenJet = 17;
-   const Int_t kMaxGenJetAK8 = 5;
-   const Int_t kMaxGenMissingET = 1;
-   const Int_t kMaxPhotonLoose = 7;
-   const Int_t kMaxPhotonTight = 5;
-   const Int_t kMaxElectron = 4;
-   const Int_t kMaxMuonLoose = 14;
-   const Int_t kMaxMuonTight = 4;
-   const Int_t kMaxElectronCHS = 29;
-   const Int_t kMaxMuonLooseCHS = 14;
-   const Int_t kMaxMuonTightCHS = 5;
-   const Int_t kMaxJet = 28;
-   const Int_t kMaxJetPUPPI = 15;
-   const Int_t kMaxJetAK8 = 15;
-   const Int_t kMaxJetPUPPIAK8 = 5;
-   const Int_t kMaxRho = 5;
-   const Int_t kMaxMissingET = 1;
-   const Int_t kMaxPuppiMissingET = 1;
-   const Int_t kMaxGenPileUpMissingET = 1;
-   const Int_t kMaxScalarHT = 1;
 
    // Declaration of leaf types
    Int_t           Event_;
