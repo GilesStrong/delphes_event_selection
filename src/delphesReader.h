@@ -37,7 +37,7 @@ const Int_t kMaxJet = 20;
 const Int_t kMaxGenMissingET = 1;
 const Int_t kMaxElectron = 5;
 const Int_t kMaxPhoton = 5;
-const Int_t kMaxMuon = 5;
+const Int_t kMaxMuonLoose = 5;
 const Int_t kMaxMissingET = 1;
 const Int_t kMaxScalarHT = 1;
 
@@ -92,98 +92,6 @@ public :
 	Float_t         Particle_Y[kMaxParticle];   //[Particle_]
 	Float_t         Particle_Z[kMaxParticle];   //[Particle_]
 	Int_t           Particle_size;
-	Int_t           Track_;
-	UInt_t          Track_fUniqueID[kMaxTrack];   //[Track_]
-	UInt_t          Track_fBits[kMaxTrack];   //[Track_]
-	Int_t           Track_PID[kMaxTrack];   //[Track_]
-	Int_t           Track_Charge[kMaxTrack];   //[Track_]
-	Float_t         Track_PT[kMaxTrack];   //[Track_]
-	Float_t         Track_Eta[kMaxTrack];   //[Track_]
-	Float_t         Track_Phi[kMaxTrack];   //[Track_]
-	Float_t         Track_EtaOuter[kMaxTrack];   //[Track_]
-	Float_t         Track_PhiOuter[kMaxTrack];   //[Track_]
-	Float_t         Track_X[kMaxTrack];   //[Track_]
-	Float_t         Track_Y[kMaxTrack];   //[Track_]
-	Float_t         Track_Z[kMaxTrack];   //[Track_]
-	Float_t         Track_T[kMaxTrack];   //[Track_]
-	Float_t         Track_XOuter[kMaxTrack];   //[Track_]
-	Float_t         Track_YOuter[kMaxTrack];   //[Track_]
-	Float_t         Track_ZOuter[kMaxTrack];   //[Track_]
-	Float_t         Track_TOuter[kMaxTrack];   //[Track_]
-	Float_t         Track_Dxy[kMaxTrack];   //[Track_]
-	Float_t         Track_SDxy[kMaxTrack];   //[Track_]
-	Float_t         Track_Xd[kMaxTrack];   //[Track_]
-	Float_t         Track_Yd[kMaxTrack];   //[Track_]
-	Float_t         Track_Zd[kMaxTrack];   //[Track_]
-	TRef            Track_Particle[kMaxTrack];
-	Int_t           Track_size;
-	Int_t           Tower_;
-	UInt_t          Tower_fUniqueID[kMaxTower];   //[Tower_]
-	UInt_t          Tower_fBits[kMaxTower];   //[Tower_]
-	Float_t         Tower_ET[kMaxTower];   //[Tower_]
-	Float_t         Tower_Eta[kMaxTower];   //[Tower_]
-	Float_t         Tower_Phi[kMaxTower];   //[Tower_]
-	Float_t         Tower_E[kMaxTower];   //[Tower_]
-	Float_t         Tower_T[kMaxTower];   //[Tower_]
-	Int_t           Tower_NTimeHits[kMaxTower];   //[Tower_]
-	Float_t         Tower_Eem[kMaxTower];   //[Tower_]
-	Float_t         Tower_Ehad[kMaxTower];   //[Tower_]
-	Float_t         Tower_Edges[kMaxTower][4];   //[Tower_]
-	TRefArray       Tower_Particles[kMaxTower];
-	Int_t           Tower_size;
-	Int_t           EFlowTrack_;
-	UInt_t          EFlowTrack_fUniqueID[kMaxEFlowTrack];   //[EFlowTrack_]
-	UInt_t          EFlowTrack_fBits[kMaxEFlowTrack];   //[EFlowTrack_]
-	Int_t           EFlowTrack_PID[kMaxEFlowTrack];   //[EFlowTrack_]
-	Int_t           EFlowTrack_Charge[kMaxEFlowTrack];   //[EFlowTrack_]
-	Float_t         EFlowTrack_PT[kMaxEFlowTrack];   //[EFlowTrack_]
-	Float_t         EFlowTrack_Eta[kMaxEFlowTrack];   //[EFlowTrack_]
-	Float_t         EFlowTrack_Phi[kMaxEFlowTrack];   //[EFlowTrack_]
-	Float_t         EFlowTrack_EtaOuter[kMaxEFlowTrack];   //[EFlowTrack_]
-	Float_t         EFlowTrack_PhiOuter[kMaxEFlowTrack];   //[EFlowTrack_]
-	Float_t         EFlowTrack_X[kMaxEFlowTrack];   //[EFlowTrack_]
-	Float_t         EFlowTrack_Y[kMaxEFlowTrack];   //[EFlowTrack_]
-	Float_t         EFlowTrack_Z[kMaxEFlowTrack];   //[EFlowTrack_]
-	Float_t         EFlowTrack_T[kMaxEFlowTrack];   //[EFlowTrack_]
-	Float_t         EFlowTrack_XOuter[kMaxEFlowTrack];   //[EFlowTrack_]
-	Float_t         EFlowTrack_YOuter[kMaxEFlowTrack];   //[EFlowTrack_]
-	Float_t         EFlowTrack_ZOuter[kMaxEFlowTrack];   //[EFlowTrack_]
-	Float_t         EFlowTrack_TOuter[kMaxEFlowTrack];   //[EFlowTrack_]
-	Float_t         EFlowTrack_Dxy[kMaxEFlowTrack];   //[EFlowTrack_]
-	Float_t         EFlowTrack_SDxy[kMaxEFlowTrack];   //[EFlowTrack_]
-	Float_t         EFlowTrack_Xd[kMaxEFlowTrack];   //[EFlowTrack_]
-	Float_t         EFlowTrack_Yd[kMaxEFlowTrack];   //[EFlowTrack_]
-	Float_t         EFlowTrack_Zd[kMaxEFlowTrack];   //[EFlowTrack_]
-	TRef            EFlowTrack_Particle[kMaxEFlowTrack];
-	Int_t           EFlowTrack_size;
-	Int_t           EFlowPhoton_;
-	UInt_t          EFlowPhoton_fUniqueID[kMaxEFlowPhoton];   //[EFlowPhoton_]
-	UInt_t          EFlowPhoton_fBits[kMaxEFlowPhoton];   //[EFlowPhoton_]
-	Float_t         EFlowPhoton_ET[kMaxEFlowPhoton];   //[EFlowPhoton_]
-	Float_t         EFlowPhoton_Eta[kMaxEFlowPhoton];   //[EFlowPhoton_]
-	Float_t         EFlowPhoton_Phi[kMaxEFlowPhoton];   //[EFlowPhoton_]
-	Float_t         EFlowPhoton_E[kMaxEFlowPhoton];   //[EFlowPhoton_]
-	Float_t         EFlowPhoton_T[kMaxEFlowPhoton];   //[EFlowPhoton_]
-	Int_t           EFlowPhoton_NTimeHits[kMaxEFlowPhoton];   //[EFlowPhoton_]
-	Float_t         EFlowPhoton_Eem[kMaxEFlowPhoton];   //[EFlowPhoton_]
-	Float_t         EFlowPhoton_Ehad[kMaxEFlowPhoton];   //[EFlowPhoton_]
-	Float_t         EFlowPhoton_Edges[kMaxEFlowPhoton][4];   //[EFlowPhoton_]
-	TRefArray       EFlowPhoton_Particles[kMaxEFlowPhoton];
-	Int_t           EFlowPhoton_size;
-	Int_t           EFlowNeutralHadron_;
-	UInt_t          EFlowNeutralHadron_fUniqueID[kMaxEFlowNeutralHadron];   //[EFlowNeutralHadron_]
-	UInt_t          EFlowNeutralHadron_fBits[kMaxEFlowNeutralHadron];   //[EFlowNeutralHadron_]
-	Float_t         EFlowNeutralHadron_ET[kMaxEFlowNeutralHadron];   //[EFlowNeutralHadron_]
-	Float_t         EFlowNeutralHadron_Eta[kMaxEFlowNeutralHadron];   //[EFlowNeutralHadron_]
-	Float_t         EFlowNeutralHadron_Phi[kMaxEFlowNeutralHadron];   //[EFlowNeutralHadron_]
-	Float_t         EFlowNeutralHadron_E[kMaxEFlowNeutralHadron];   //[EFlowNeutralHadron_]
-	Float_t         EFlowNeutralHadron_T[kMaxEFlowNeutralHadron];   //[EFlowNeutralHadron_]
-	Int_t           EFlowNeutralHadron_NTimeHits[kMaxEFlowNeutralHadron];   //[EFlowNeutralHadron_]
-	Float_t         EFlowNeutralHadron_Eem[kMaxEFlowNeutralHadron];   //[EFlowNeutralHadron_]
-	Float_t         EFlowNeutralHadron_Ehad[kMaxEFlowNeutralHadron];   //[EFlowNeutralHadron_]
-	Float_t         EFlowNeutralHadron_Edges[kMaxEFlowNeutralHadron][4];   //[EFlowNeutralHadron_]
-	TRefArray       EFlowNeutralHadron_Particles[kMaxEFlowNeutralHadron];
-	Int_t           EFlowNeutralHadron_size;
 	Int_t           GenJet_;
 	UInt_t          GenJet_fUniqueID[kMaxGenJet];   //[GenJet_]
 	UInt_t          GenJet_fBits[kMaxGenJet];   //[GenJet_]
@@ -219,14 +127,6 @@ public :
 	Int_t           GenJet_NSubJetsSoftDropped[kMaxGenJet];   //[GenJet_]
 	TRefArray       GenJet_Constituents[kMaxGenJet];
 	TRefArray       GenJet_Particles[kMaxGenJet];
-	UInt_t          GenJet_Area_fUniqueID[kMaxGenJet];   //[GenJet_]
-	UInt_t          GenJet_Area_fBits[kMaxGenJet];   //[GenJet_]
-	UInt_t          GenJet_Area_fP_fUniqueID[kMaxGenJet];   //[GenJet_]
-	UInt_t          GenJet_Area_fP_fBits[kMaxGenJet];   //[GenJet_]
-	Double_t        GenJet_Area_fP_fX[kMaxGenJet];   //[GenJet_]
-	Double_t        GenJet_Area_fP_fY[kMaxGenJet];   //[GenJet_]
-	Double_t        GenJet_Area_fP_fZ[kMaxGenJet];   //[GenJet_]
-	Double_t        GenJet_Area_fE[kMaxGenJet];   //[GenJet_]
 	Int_t           GenJet_size;
 	Int_t           GenMissingET_;
 	UInt_t          GenMissingET_fUniqueID[kMaxGenMissingET];   //[GenMissingET_]
@@ -270,14 +170,6 @@ public :
 	Int_t           Jet_NSubJetsSoftDropped[kMaxJet];   //[Jet_]
 	TRefArray       Jet_Constituents[kMaxJet];
 	TRefArray       Jet_Particles[kMaxJet];
-	UInt_t          Jet_Area_fUniqueID[kMaxJet];   //[Jet_]
-	UInt_t          Jet_Area_fBits[kMaxJet];   //[Jet_]
-	UInt_t          Jet_Area_fP_fUniqueID[kMaxJet];   //[Jet_]
-	UInt_t          Jet_Area_fP_fBits[kMaxJet];   //[Jet_]
-	Double_t        Jet_Area_fP_fX[kMaxJet];   //[Jet_]
-	Double_t        Jet_Area_fP_fY[kMaxJet];   //[Jet_]
-	Double_t        Jet_Area_fP_fZ[kMaxJet];   //[Jet_]
-	Double_t        Jet_Area_fE[kMaxJet];   //[Jet_]
 	Int_t           Jet_size;
 	Int_t           Electron_;
 	UInt_t          Electron_fUniqueID[kMaxElectron];   //[Electron_]
@@ -296,39 +188,22 @@ public :
 	Float_t         Electron_SumPtChargedPU[kMaxElectron];   //[Electron_]
 	Float_t         Electron_SumPt[kMaxElectron];   //[Electron_]
 	Int_t           Electron_size;
-	Int_t           Photon_;
-	UInt_t          Photon_fUniqueID[kMaxPhoton];   //[Photon_]
-	UInt_t          Photon_fBits[kMaxPhoton];   //[Photon_]
-	Float_t         Photon_PT[kMaxPhoton];   //[Photon_]
-	Float_t         Photon_Eta[kMaxPhoton];   //[Photon_]
-	Float_t         Photon_Phi[kMaxPhoton];   //[Photon_]
-	Float_t         Photon_E[kMaxPhoton];   //[Photon_]
-	Float_t         Photon_T[kMaxPhoton];   //[Photon_]
-	Float_t         Photon_EhadOverEem[kMaxPhoton];   //[Photon_]
-	TRefArray       Photon_Particles[kMaxPhoton];
-	Float_t         Photon_IsolationVar[kMaxPhoton];   //[Photon_]
-	Float_t         Photon_IsolationVarRhoCorr[kMaxPhoton];   //[Photon_]
-	Float_t         Photon_SumPtCharged[kMaxPhoton];   //[Photon_]
-	Float_t         Photon_SumPtNeutral[kMaxPhoton];   //[Photon_]
-	Float_t         Photon_SumPtChargedPU[kMaxPhoton];   //[Photon_]
-	Float_t         Photon_SumPt[kMaxPhoton];   //[Photon_]
-	Int_t           Photon_size;
-	Int_t           Muon_;
-	UInt_t          Muon_fUniqueID[kMaxMuon];   //[Muon_]
-	UInt_t          Muon_fBits[kMaxMuon];   //[Muon_]
-	Float_t         Muon_PT[kMaxMuon];   //[Muon_]
-	Float_t         Muon_Eta[kMaxMuon];   //[Muon_]
-	Float_t         Muon_Phi[kMaxMuon];   //[Muon_]
-	Float_t         Muon_T[kMaxMuon];   //[Muon_]
-	Int_t           Muon_Charge[kMaxMuon];   //[Muon_]
-	TRef            Muon_Particle[kMaxMuon];
-	Float_t         Muon_IsolationVar[kMaxMuon];   //[Muon_]
-	Float_t         Muon_IsolationVarRhoCorr[kMaxMuon];   //[Muon_]
-	Float_t         Muon_SumPtCharged[kMaxMuon];   //[Muon_]
-	Float_t         Muon_SumPtNeutral[kMaxMuon];   //[Muon_]
-	Float_t         Muon_SumPtChargedPU[kMaxMuon];   //[Muon_]
-	Float_t         Muon_SumPt[kMaxMuon];   //[Muon_]
-	Int_t           Muon_size;
+	Int_t           MuonLoose_;
+	UInt_t          MuonLoose_fUniqueID[kMaxMuonLoose];   //[MuonLoose_]
+	UInt_t          MuonLoose_fBits[kMaxMuonLoose];   //[MuonLoose_]
+	Float_t         MuonLoose_PT[kMaxMuonLoose];   //[MuonLoose_]
+	Float_t         MuonLoose_Eta[kMaxMuonLoose];   //[MuonLoose_]
+	Float_t         MuonLoose_Phi[kMaxMuonLoose];   //[MuonLoose_]
+	Float_t         MuonLoose_T[kMaxMuonLoose];   //[MuonLoose_]
+	Int_t           MuonLoose_Charge[kMaxMuonLoose];   //[MuonLoose_]
+	TRef            MuonLoose_Particle[kMaxMuonLoose];
+	Float_t         MuonLoose_IsolationVar[kMaxMuonLoose];   //[MuonLoose_]
+	Float_t         MuonLoose_IsolationVarRhoCorr[kMaxMuonLoose];   //[MuonLoose_]
+	Float_t         MuonLoose_SumPtCharged[kMaxMuonLoose];   //[MuonLoose_]
+	Float_t         MuonLoose_SumPtNeutral[kMaxMuonLoose];   //[MuonLoose_]
+	Float_t         MuonLoose_SumPtChargedPU[kMaxMuonLoose];   //[MuonLoose_]
+	Float_t         MuonLoose_SumPt[kMaxMuonLoose];   //[MuonLoose_]
+	Int_t           MuonLoose_size;
 	Int_t           MissingET_;
 	UInt_t          MissingET_fUniqueID[kMaxMissingET];   //[MissingET_]
 	UInt_t          MissingET_fBits[kMaxMissingET];   //[MissingET_]
@@ -609,22 +484,22 @@ public :
 	TBranch        *b_Photon_SumPtChargedPU;   //!
 	TBranch        *b_Photon_SumPt;   //!
 	TBranch        *b_Photon_size;   //!
-	TBranch        *b_Muon_;   //!
-	TBranch        *b_Muon_fUniqueID;   //!
-	TBranch        *b_Muon_fBits;   //!
-	TBranch        *b_Muon_PT;   //!
-	TBranch        *b_Muon_Eta;   //!
-	TBranch        *b_Muon_Phi;   //!
-	TBranch        *b_Muon_T;   //!
-	TBranch        *b_Muon_Charge;   //!
-	TBranch        *b_Muon_Particle;   //!
-	TBranch        *b_Muon_IsolationVar;   //!
-	TBranch        *b_Muon_IsolationVarRhoCorr;   //!
-	TBranch        *b_Muon_SumPtCharged;   //!
-	TBranch        *b_Muon_SumPtNeutral;   //!
-	TBranch        *b_Muon_SumPtChargedPU;   //!
-	TBranch        *b_Muon_SumPt;   //!
-	TBranch        *b_Muon_size;   //!
+	TBranch        *b_MuonLoose_;   //!
+	TBranch        *b_MuonLoose_fUniqueID;   //!
+	TBranch        *b_MuonLoose_fBits;   //!
+	TBranch        *b_MuonLoose_PT;   //!
+	TBranch        *b_MuonLoose_Eta;   //!
+	TBranch        *b_MuonLoose_Phi;   //!
+	TBranch        *b_MuonLoose_T;   //!
+	TBranch        *b_MuonLoose_Charge;   //!
+	TBranch        *b_MuonLoose_Particle;   //!
+	TBranch        *b_MuonLoose_IsolationVar;   //!
+	TBranch        *b_MuonLoose_IsolationVarRhoCorr;   //!
+	TBranch        *b_MuonLoose_SumPtCharged;   //!
+	TBranch        *b_MuonLoose_SumPtNeutral;   //!
+	TBranch        *b_MuonLoose_SumPtChargedPU;   //!
+	TBranch        *b_MuonLoose_SumPt;   //!
+	TBranch        *b_MuonLoose_size;   //!
 	TBranch        *b_MissingET_;   //!
 	TBranch        *b_MissingET_fUniqueID;   //!
 	TBranch        *b_MissingET_fBits;   //!
