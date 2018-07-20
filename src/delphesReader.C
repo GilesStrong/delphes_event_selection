@@ -214,7 +214,7 @@ void delphesReader::Init(TTree *tree) {
 	fChain->SetBranchAddress("MuonLoose.SumPtNeutral", Muon_SumPtNeutral, &b_Muon_SumPtNeutral);
 	fChain->SetBranchAddress("MuonLoose.SumPtChargedPU", Muon_SumPtChargedPU, &b_Muon_SumPtChargedPU);
 	fChain->SetBranchAddress("MuonLoose.SumPt", Muon_SumPt, &b_Muon_SumPt);
-	fChain->SetBranchAddress("Muon_size", &Muon_size, &b_Muon_size);
+	fChain->SetBranchAddress("MuonLoose_size", &Muon_size, &b_Muon_size);
 	fChain->SetBranchAddress("MissingET", &MissingET_, &b_MissingET_);
 	fChain->SetBranchAddress("MissingET.fUniqueID", MissingET_fUniqueID, &b_MissingET_fUniqueID);
 	fChain->SetBranchAddress("MissingET.fBits", MissingET_fBits, &b_MissingET_fBits);
