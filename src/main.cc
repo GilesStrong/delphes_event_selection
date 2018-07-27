@@ -957,7 +957,6 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	std::cout << "Plots initialised\n";
 	//___________________________________________
 	//Load data__________________________________
-	if (options["-s"] != "1") return 0; //Run event selection
 	std::cout << "Running event selection\n";
 	TFile* inputData = TFile::Open(options["-i"].c_str()); //File containing Delphes-simulated MC data
 	TTree* eventTree = (TTree*)inputData->Get("Delphes");
