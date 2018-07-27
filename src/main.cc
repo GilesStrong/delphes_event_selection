@@ -1055,12 +1055,12 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					t_0_eta = v_tau_0.Eta();
 					t_0_phi = v_tau_0.Phi();
 					t_0_mass = v_tau_0.M();
-					t_0_mT = getMT(t_0_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_0, v_MPT));
+					t_0_mT = getMT(t_0_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_0, v_mPT));
 					t_1_pT = v_tau_1.Pt();
 					t_1_eta = v_tau_1.Eta();
 					t_1_phi = v_tau_1.Phi();
 					t_1_mass = muMass;
-					t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, v_MPT));
+					t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, v_mPT));
 					h_tt_pT = v_higgs_tt.Pt();
 					h_tt_eta = v_higgs_tt.Eta();
 					h_tt_phi = v_higgs_tt.Phi();
@@ -1146,12 +1146,12 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					t_0_eta = v_tau_0.Eta();
 					t_0_phi = v_tau_0.Phi();
 					t_0_mass = v_tau_0.M();
-					t_0_mT = getMT(t_0_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_0, v_MPT));
+					t_0_mT = getMT(t_0_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_0, v_mPT));
 					t_1_pT = v_tau_1.Pt();
 					t_1_eta = v_tau_1.Eta();
 					t_1_phi = v_tau_1.Phi();
 					t_1_mass = eMass;
-					t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, v_MPT));
+					t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, v_mPT));
 					h_tt_pT = v_higgs_tt.Pt();
 					h_tt_eta = v_higgs_tt.Eta();
 					h_tt_phi = v_higgs_tt.Phi();
@@ -1199,16 +1199,16 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 				}
 				if (taus.size() >= 2) {//Quality tau pair
 					h_tau_tau_cutFlow->Fill("Quality #tau#tau", 1);
-					if (getOSTauTauPair(branchJet, &taus, &tau_0, &tau_1)) { //OS Tau pair
+					if (getOSTauTauPair(reader, &taus, &tau_0, &tau_1)) { //OS Tau pair
 						h_tau_tau_cutFlow->Fill("OS", 1);
-						v_tau_1 = etTauHadron(reader, tau_1);
+						v_tau_1 = getTauHadron(reader, tau_1);
 						v_tau_0 = getTauHadron(reader, tau_0);
 						v_mPT.SetPtEtaPhiM(reader->MissingET_MET[0], 0.0, reader->MissingET_Phi[0], 0.0);
 						v_higgs_tt = getHiggs2Taus(v_mPT, v_tau_0, v_tau_1);
 						gen_mctMatch = false;
 						if (options["-t"] == "1") {
 							gen_mctMatch = truthCut(options["-i"], cEvent, //Checks final-state selection was correct
-									tau_0, tau_1 "tau:tau",
+									tau_0, tau_1, "tau:tau",
 									&mcTruthPlots, &v_gen_higgs_tt,
 									&v_gen_tau_0, &v_gen_tau_1);
 						}
@@ -1234,12 +1234,12 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 						t_0_eta = v_tau_0.Eta();
 						t_0_phi = v_tau_0.Phi();
 						t_0_mass = v_tau_0.M();
-						t_0_mT = getMT(t_0_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_0, v_MPT));
+						t_0_mT = getMT(t_0_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_0, v_mPT));
 						t_1_pT = v_tau_1.Pt();
 						t_1_eta = v_tau_1.Eta();
 						t_1_phi = v_tau_1.Phi();
 						t_1_mass = v_tau_1.M();
-						t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, v_MPT));
+						t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, v_mPT));
 						h_tt_pT = v_higgs_tt.Pt();
 						h_tt_eta = v_higgs_tt.Eta();
 						h_tt_phi = v_higgs_tt.Phi();
@@ -1290,7 +1290,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
 							&& std::abs(reader->Jet_Eta[i]) < tauEtaMax) { //Quality tau
 						taus.push_back(i);
-						break
+						break;
 					}
 				}
 				if (taus.size() == 0) {//No taus
@@ -1328,12 +1328,12 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					t_0_mass = muMass;
 					mPT_pT = reader->MissingET_MET[0];
 					mPT_phi = reader->MissingET_Phi[0];
-					t_0_mT = getMT(t_0_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_0, v_MPT));
+					t_0_mT = getMT(t_0_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_0, v_mPT));
 					t_1_pT = v_tau_1.Pt();
 					t_1_eta = v_tau_1.Eta();
 					t_1_phi = v_tau_1.Phi();
 					t_1_mass = muMass;
-					t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, v_MPT));
+					t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, v_mPT));
 					h_tt_pT = v_higgs_tt.Pt();
 					h_tt_eta = v_higgs_tt.Eta();
 					h_tt_phi = v_higgs_tt.Phi();
@@ -1372,7 +1372,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 			for (int i = 0; i < reader->Electron_size; i++) { //Loop through electrons
 				if (reader->Electron_PT[i] > ePTMin && std::abs(reader->Electron_Eta[i]) < eEtaMax
 						&& reader->Electron_IsolationVar[i] < eIsoMax
-						&& reader->Electron_Charge != reader->MuonLoose_Charge[muons[0]]) { //Quality OS electron
+						&& reader->Electron_Charge[i] != reader->MuonLoose_Charge[muons[0]]) { //Quality OS electron
 					electrons.push_back(i);
 				}
 			 	else if (reader->Electron_PT[i] > ePTMinAdd && std::abs(reader->Electron_Eta[i]) < eEtaMaxAdd
@@ -1381,13 +1381,13 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					break;
 				}
 			}
-			if (electons.size() == 1 && !addElectron) { //No additional electrons found
+			if (electrons.size() == 1 && !addElectron) { //No additional electrons found
 				h_e_mu_cutFlow->Fill("1 #mu & 1 e", 1);
 				for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
 					if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
 							&& std::abs(reader->Jet_Eta[i]) < tauEtaMax) { //Quality tau
 						taus.push_back(i);
-						break
+						break;
 					}
 				}
 				if (taus.size() == 0) {//No taus
@@ -1425,12 +1425,12 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					t_0_eta = v_tau_0.Eta();
 					t_0_phi = v_tau_0.Phi();
 					t_0_mass = muMass;
-					t_0_mT = getMT(t_0_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_0, v_MPT));
+					t_0_mT = getMT(t_0_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_0, v_mPT));
 					t_1_pT = v_tau_1.Pt();
 					t_1_eta = v_tau_1.Eta();
 					t_1_phi = v_tau_1.Phi();
 					t_1_mass = muMass;
-					t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, v_MPT));
+					t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, v_mPT));
 					h_tt_pT = v_higgs_tt.Pt();
 					h_tt_eta = v_higgs_tt.Eta();
 					h_tt_phi = v_higgs_tt.Phi();
@@ -1480,7 +1480,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
 							&& std::abs(reader->Jet_Eta[i]) < tauEtaMax) { //Quality tau
 						taus.push_back(i);
-						break
+						break;
 					}
 				}
 				if (taus.size() == 0) {//No taus
@@ -1518,12 +1518,12 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					t_0_eta = v_tau_0.Eta();
 					t_0_phi = v_tau_0.Phi();
 					t_0_mass = eMass;
-					t_0_mT = getMT(t_0_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_0, v_MPT));
+					t_0_mT = getMT(t_0_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_0, v_mPT));
 					t_1_pT = v_tau_1.Pt();
 					t_1_eta = v_tau_1.Eta();
 					t_1_phi = v_tau_1.Phi();
 					t_1_mass = eMass;
-					t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, v_MPT));
+					t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, v_mPT));
 					h_tt_pT = v_higgs_tt.Pt();
 					h_tt_eta = v_higgs_tt.Eta();
 					h_tt_phi = v_higgs_tt.Phi();
