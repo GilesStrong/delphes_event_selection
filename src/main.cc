@@ -408,18 +408,15 @@ bool truthCut(TClonesArray *branchParticle, TClonesArray *branchElectron,
 		int leptonMother_0 = ancestrySearch(lightLepton_0, tau_0, tau_1, branchParticle);
 		if (leptonMother_0 == -1) {
 			if (debug) std::cout << "MC check fails due to ancestry check\n";
-			chain->Delete();
 			return false; //Light lepton 0 did not come from tau decay
 		}
 		int leptonMother_1 = ancestrySearch(lightLepton_1, tau_0, tau_1, branchParticle);
 		if (leptonMother_1 == -1) {
 			if (debug) std::cout << "MC check fails due to ancestry check\n";
-			chain->Delete();
 			return false; //Light lepton 1 did not come from tau decay
 		}
 		if (leptonMother_0 == leptonMother_1) {
 			if (debug) std::cout << "MC check fails due to both leptons coming from same tau\n";
-			chain->Delete();
 			return false; //Leptons both came from same mother (somehow)
 		}
 		(*plots)["cuts"]->Fill(("h->#tau#tau->" + typeLookup(mode) + " pass").c_str(), 1);
@@ -761,9 +758,10 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	chain->Add(options["-i"].c_str());
 	ExRootTreeReader *treeReader = new ExRootTreeReader(chain);
 	TClonesArray *branchElectron = treeReader->UseBranch("Electron");
-	TClonesArray *branchMuon = treeReader->UseBranch("MuonLoose");
-	TClonesArray *branchJet = treeReader->UseBranch("JetPUPPI");
-	TClonesArray *branchMissingET = treeReader->UseBranch("PuppiMissingET");
+	TClonesArray *branchMuon = treeReader->UseBranch("Muon");
+	TClonesArray *branchJet = treeReader->UseBranch("Jet");
+	TClonesArray *branchMissingET = treeReader->UseBranch("MissingET");
+	TClonesArray *branchParticle = treeReader->UseBranch("Particle");
 	TClonesArray *branchWeights = treeReader->UseBranch("Weight");
 	std::cout << "Data loaded\n";
 	//_______________________________________
@@ -772,7 +770,8 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	std::cout << "Total number of events in file: " << nEvents << "\n";
 	std::vector<int> taus, bJets, electrons, muons;
 	bool addMuon, addElectron;
-	TLorentzVector v_tau_0, v_tau_1, v_bJet_0;
+	TLorentzVector v_tau_0, v_tau_1, v_bJet_0, v_higgs_tt;
+	TLorentzVector v_gen_tau_0, v_gen_tau_1, v_gen_higgs_tt;
 	Jet* tmpJet;
 	Electron* tmpElectron;
 	Muon* tmpMuon;
@@ -831,7 +830,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 				}
 				if (taus.size() >= 1) {//Quality tau
 					h_mu_tau_cutFlow->Fill("Quality #tau", 1);
-					v_tau_1 = tmpMuon->P4()
+					v_tau_1 = tmpMuon->P4();
 					tmpJet = (Jet*)branchJet->At(taus[0]);
 					v_tau_0 = tmpJet->P4();
 					tmpMPT = (MissingET*)branchMissingET->At(0);
