@@ -9,248 +9,56 @@
 
 bool debug = false;
 
-bool getOSTauLeptonPair(delphesReader* reader, std::vector<int>* taus,	std::vector<int> *leptons,
-		int* tau, int* lepton, bool electron) {
-	/*Checks whether an OS tau-lepton pair exists, and if so returns true and points tau and lepton
- 	to the selected particles.*/
-	std::vector<std::pair<int, int> > pairs; //Initialise array for tau lepton OS pairs
-	for (int t : *taus) { //Loop through taus
-		for (int l : *leptons) { //Loop through leptons
-			if (electron) {
-				if (reader->Jet_Charge[t] != reader->Electron_Charge[l]) {
-					pairs.push_back(std::make_pair(t, l));
-				}
-			} else {
-				if (reader->Jet_Charge[t] != reader->Muon_Charge[l]) {
-					pairs.push_back(std::make_pair(t, l));
-				}
-			}
-		}
-		if (pairs.size() == 1) { //Only one OS pair found
-			*tau = pairs[0].first;
-			*lepton = pairs[0].second;
-			return true;
-		} else if (pairs.size() > 1) { //Multiple OS pairs: select highest summed |pT| pair
-			double pT, highestPT = 0;
-			std::pair<int, int> best;
-			for (std::pair<int, int> p : pairs) { //Loop through pairs
-				if (electron) {
-					pT = std::abs(reader->Jet_PT[p.first])+std::abs(reader->Electron_PT[p.second]);
-				} else {
-					pT = std::abs(reader->Jet_PT[p.first])+std::abs(reader->Muon_PT[p.second]);
-				}
-				if (pT > highestPT) {
-					best = p;
-					highestPT = pT;
-				}
-			}
-			*tau = best.first;
-			*lepton = best.second;
-			return true;
-		} else { //No OS pairs found
-			return false;
-		}
-	}
-	return false;
-}
-
-bool getOSLeptonLeptonPair(delphesReader* reader, std::vector<int>* electrons,
-		std::vector<int> *muons, int* lepton_0, int* lepton_1, std::string mode) {
-	/*Checks whether an OS lepton-lepton pair exists, and if so returns true and points lepton_0
-	and lepton_1 to the selected particles*/
-	std::vector<std::pair<int, int> > pairs; //Initialise array for OS pairs
-	if (mode == "muons") {
-		for (int m0 : *muons) { //Loop through muons
-			for (int m1 : *muons) {
-				if (m0 == m1) continue;
-				if (reader->Muon_Charge[m0] != reader->Muon_Charge[m1]) {
-					pairs.push_back(std::make_pair(m0, m1));
-				}
-			}
-			if (pairs.size() == 1) { //Only one OS pair found
-				*lepton_0 = pairs[0].first;
-				*lepton_1 = pairs[0].second;
-				if (reader->Muon_PT[*lepton_0] < reader->Muon_PT[*lepton_1]) { //Order muons by pT
-					*lepton_1 = pairs[0].first;
-					*lepton_0 = pairs[0].second;
-				}
-				return true;
-			} else if (pairs.size() > 1) { //Multiple OS pairs: select highest summed |pT| pair
-				double pT, highestPT = 0;
-				std::pair<int, int> best;
-				for (std::pair<int, int> p : pairs) { //Loop through pairs
-					pT = std::abs(reader->Muon_PT[p.first])+std::abs(reader->Muon_PT[p.second]);
-					if (pT > highestPT) {
-						best = p;
-						highestPT = pT;
-					}
-				}
-				*lepton_0 = best.first;
-				*lepton_1 = best.second;
-				if (reader->Muon_PT[*lepton_0] < reader->Muon_PT[*lepton_1]) { //Order muons by pT
-					*lepton_1 = best.first;
-					*lepton_0 = best.second;
-				}
-				return true;
-			} else { //No OS pairs found
-				return false;
-			}
-		}
-		return false;
-	} else if (mode == "electrons") {
-		for (int e0 : *electrons) { //Loop through electrons
-			for (int e1 : *electrons) {
-				if (e0 == e1) continue;
-				if (reader->Electron_Charge[e0] != reader->Electron_Charge[e1]) {
-					pairs.push_back(std::make_pair(e0, e1));
-				}
-			}
-			if (pairs.size() == 1) { //Only one OS pair found
-				*lepton_0 = pairs[0].first;
-				*lepton_1 = pairs[0].second;
-				if (reader->Electron_PT[*lepton_0] < reader->Electron_PT[*lepton_1]) { //Order electrons by pT
-					*lepton_1 = pairs[0].first;
-					*lepton_0 = pairs[0].second;
-				}
-				return true;
-			} else if (pairs.size() > 1) { //Multiple OS pairs: select highest summed |pT| pair
-				double pT, highestPT = 0;
-				std::pair<int, int> best;
-				for (std::pair<int, int> p : pairs) { //Loop through pairs
-					pT = std::abs(reader->Electron_PT[p.first])+std::abs(reader->Electron_PT[p.second]);
-					if (pT > highestPT) {
-						best = p;
-						highestPT = pT;
-					}
-				}
-				*lepton_0 = best.first;
-				*lepton_1 = best.second;
-				if (reader->Electron_PT[*lepton_0] < reader->Electron_PT[*lepton_1]) { //Order electrons by pT
-					*lepton_1 = best.first;
-					*lepton_0 = best.second;
-				}
-				return true;
-			} else { //No OS pairs found
-				return false;
-			}
-		}
-		return false;
-	} else if (mode == "mixed") {
-		for (int m : *muons) { //Loop through muons
-			for (int e : *electrons) { //Loop through electrons
-				if (reader->Muon_Charge[m] != reader->Electron_Charge[e]) {
-					pairs.push_back(std::make_pair(m, e));
-				}
-			}
-			if (pairs.size() == 1) { //Only one OS pair found
-				*lepton_0 = pairs[0].first;
-				*lepton_1 = pairs[0].second;
-				return true;
-			} else if (pairs.size() > 1) { //Multiple OS pairs: select highest summed |pT| pair
-				double pT, highestPT = 0;
-				std::pair<int, int> best;
-				for (std::pair<int, int> p : pairs) { //Loop through pairs
-					pT = std::abs(reader->Muon_PT[p.first])+std::abs(reader->Electron_PT[p.second]);
-					if (pT > highestPT) {
-						best = p;
-						highestPT = pT;
-					}
-				}
-				*lepton_0 = best.first;
-				*lepton_1 = best.second;
-				return true;
-			} else { //No OS pairs found
-				return false;
-			}
-		}
-		return false;
-	}
-	return false;
-}
-
-bool getOSTauTauPair(delphesReader* reader, std::vector<int>* taus, int* tau_0, int* tau_1) {
+bool getOSTauTauPair(TClonesArray* jets, std::vector<int>* taus, int* tau_0, int* tau_1) {
 	/*Checks whether an OS tau-tau pair exists, and if so returns true and points tau and lepton to
 	the	selected particles*/
+	Jet *tau0, *tau1;
 	std::vector<std::pair<int, int> > pairs; //Initialise array for OS tau pairs
+	if (debug) std::cout << taus->size() << " tau jets found\n";
 	for (int t0 : *taus) { //Loop through taus
 		for (int t1 : *taus) {
 			if (t0 == t1) continue;
-			if (reader->Jet_Charge[t0] != reader->Jet_Charge[t1]) {
+			tau0 = (Jet*)jets->At(t0);
+			tau1 = (Jet*)jets->At(t1);
+			if (tau0->Charge != tau1->Charge) {
 				pairs.push_back(std::make_pair(t0, t1));
 			}
 		}
-		if (pairs.size() == 1) { //Only one OS pair found
-			*tau_0 = pairs[0].first;
-			*tau_1 = pairs[0].second;
-			if (reader->Jet_PT[*tau_0] < reader->Jet_PT[*tau_1]) { //Order taus by pT
-				*tau_1 = pairs[0].first;
-				*tau_0 = pairs[0].second;
-			}
-			return true;
-		} else if (pairs.size() > 1) { //Multiple OS pairs: select highest summed |pT| pair
-			double pT, highestPT = 0;
-			std::pair<int, int> best;
-			for (std::pair<int, int> p : pairs) { //Loop through pairs
-				pT = std::abs(reader->Jet_PT[p.first])+std::abs(reader->Jet_PT[p.second]);
-				if (pT > highestPT) {
-					best = p;
-					highestPT = pT;
-				}
-			}
-			*tau_0 = best.first;
-			*tau_1 = best.second;
-			if (reader->Jet_PT[*tau_0] < reader->Jet_PT[*tau_1]) { //Order taus by pT
-				*tau_1 = best.first;
-				*tau_0 = best.second;
-			}
-			return true;
-		} else { //No OS pairs found
-			return false;
+	}
+	if (debug) std::cout << pairs.size() << " OS tau-jet pairs found\n";
+	if (pairs.size() == 1) { //Only one OS pair found
+		tau0 = (Jet*)jets->At(pairs[0].first);
+		tau1 = (Jet*)jets->At(pairs[0].second);
+		if (tau0->PT < tau1->PT) { //Order taus by pT
+			*tau_1 = pairs[0].first;
+			*tau_0 = pairs[0].second;
 		}
+		return true;
+	} else if (pairs.size() > 1) { //Multiple OS pairs: select highest summed |pT| pair
+		double pT, highestPT = 0;
+		std::pair<int, int> best;
+		for (std::pair<int, int> p : pairs) { //Loop through pairs
+			tau0 = (Jet*)jets->At(p.first);
+			tau1 = (Jet*)jets->At(p.second);
+			pT = tau0->PT+tau1->PT;
+			if (pT > highestPT) {
+				best = p;
+				highestPT = pT;
+			}
+		}
+		*tau_0 = best.first;
+		*tau_1 = best.second;
+		tau0 = (Jet*)jets->At(best.first);
+		tau1 = (Jet*)jets->At(best.second);
+		if (tau0->PT < tau1->PT) { //Order taus by pT
+			*tau_1 = best.first;
+			*tau_0 = best.second;
+		}
+		return true;
+	} else { //No OS pairs found
+		return false;
 	}
 	return false;
-}
-
-int getNElectrons(delphesReader* reader) {
-	/*Returns number of reco. electrons in event*/
-	int nElectrons = 0;
-	for (int i = 0; i < reader->Electron_size; i++) { //Loop through electrons
-		if (reader->Electron_PT[i] > ePTMinAdd && std::abs(reader->Electron_Eta[i]) < eEtaMaxAdd
-				&& reader->Electron_IsolationVar[i] < eIsoMaxAdd) { //Quality electron
-			nElectrons++;
-		}
-	}
-	return nElectrons;
-}
-
-int getNMuons(delphesReader* reader) {
-	/*Returns number of reco. muons in event*/
-	int nMuons = 0;
-	for (int i = 0; i < reader->Muon_size; i++) { //Loop through muons
-		if (reader->Muon_PT[i] > muPTMinAdd && std::abs(reader->Muon_Eta[i]) < muEtaMaxAdd
-				&& reader->Muon_IsolationVar[i] < muIsoMaxAdd) { //Quality muon
-			nMuons++;
-		}
-	}
-	return nMuons;
-}
-
-TLorentzVector getTauHadron(delphesReader* reader, int tau) {
-	/*Returns 4-vector of hadronically decaying tau*/
-	TLorentzVector t;
-	t.SetPtEtaPhiM(reader->Jet_PT[tau], reader->Jet_Eta[tau], reader->Jet_Phi[tau], reader->Jet_Mass[tau]);
-	return t;
-}
-
-TLorentzVector getTauLepton(delphesReader* reader, int lepton, std::string mode) {
-	/*Returns 4-vector leptonically decaying tau*/
-	TLorentzVector l;
-	if (mode == "electron") {
-		l.SetPtEtaPhiM(reader->Electron_PT[lepton], reader->Electron_Eta[lepton], reader->Electron_Phi[lepton], eMass);
-	} else if (mode == "muon"){
-		l.SetPtEtaPhiM(reader->Muon_PT[lepton], reader->Muon_Eta[lepton], reader->Muon_Phi[lepton], muMass);
-	}
-	return l;
 }
 
 void makeDirs(std::string outputName) {
@@ -263,12 +71,14 @@ void makeDirs(std::string outputName) {
 	}
 }
 
-TLorentzVector getHiggs2Taus(TLorentzVector mPT, TLorentzVector t_0, TLorentzVector t_1) {
+TLorentzVector getHiggs2Taus(MissingET* mpt, TLorentzVector t_0, TLorentzVector t_1) {
 	/*Returns 4-vector of Higgs->tau tau*/
-	TLorentzVector higgs;
+	TLorentzVector higgs, mPT;
+	mPT.SetPtEtaPhiM(mpt->MET, 0.0, mpt->Phi, 0.0); //TODO Check this
 	higgs = t_0 + t_1 + mPT;
 	return higgs;
 }
+
 
 inline double getMT(double pT, double mPT, double dphi) {
 	return sqrt(2*pT*mPT*(1-cos(dphi)));
@@ -497,20 +307,14 @@ bool getGenHiggs(TClonesArray *branchParticle,
 	return false; //h->tautau not found
 }
 
-bool truthCut(std::string input, Long64_t cEvent, int l_0, int l_1,
-		std::string mode, std::map<std::string, TH1D*>* plots,
-		TLorentzVector* v_gen_higgs_tt,
-		TLorentzVector* v_gen_tau_0, TLorentzVector* v_gen_tau_1) {
+bool truthCut(TClonesArray *branchParticle, TClonesArray *branchElectron,
+			  TClonesArray *branchMuon, TClonesArray *branchJet,
+			  int l_0, int l_1,
+			  std::string mode, std::map<std::string, TH1D*>* plots,
+		      TLorentzVector* v_gen_higgs_tt,
+			  TLorentzVector* v_gen_tau_0, TLorentzVector* v_gen_tau_1) {
 	/*Checks whether selected final states are correct*/
 	double jetRadius = 0.5;
-	TChain *chain = new TChain("Delphes");
-	chain->Add(input.c_str());
-	ExRootTreeReader *treeReader = new ExRootTreeReader(chain);
-	TClonesArray *branchParticle = treeReader->UseBranch("Particle");
-	TClonesArray *branchElectron = treeReader->UseBranch("Electron");
-	TClonesArray *branchMuon = treeReader->UseBranch("Muon");
-	TClonesArray *branchJet = treeReader->UseBranch("Jet");
-	treeReader->ReadEntry(cEvent);
 	if (debug) std::cout << "Loading data for MC truth cut on event mode " << mode << "\n";
 	//Check if selected final states are correct_
 	(*plots)["cuts"]->Fill("MC-truth check", 1);
@@ -529,7 +333,6 @@ bool truthCut(std::string input, Long64_t cEvent, int l_0, int l_1,
 		//h->tau_h tau_h_________________________
 		if (!checkDiJet(branchJet, branchParticle, l_0, l_1, hTauTau, 15, &swap, (*plots)["tauMatch"], jetRadius)) {
 			if (debug) std::cout << "MC check fails due to di-Jet on tau-jets check\n";
-			chain->Delete();
 			return false; //tau-jet selection incorrect
 		}
 		if (swap) {
@@ -566,7 +369,6 @@ bool truthCut(std::string input, Long64_t cEvent, int l_0, int l_1,
 		int leptonMother = ancestrySearch(lightLepton, tau_0, tau_1, branchParticle);
 		if (leptonMother == -1) {
 			if (debug) std::cout << "MC check fails due to ancestry check\n";
-			chain->Delete();
 			return false; //Light lepton did not come from tau decay
 		}
 		GenParticle* tauh;
@@ -579,7 +381,6 @@ bool truthCut(std::string input, Long64_t cEvent, int l_0, int l_1,
 		}
 		if (tauh->P4().DeltaR(tauJet->P4()) > jetRadius) {
 			if (debug) std::cout << "MC check fails due to tau-jet check\n";
-			chain->Delete();
 			return false; //Tau outside selected jet
 		}
 		(*plots)["cuts"]->Fill(("h->#tau#tau->" + typeLookup(mode) + " pass").c_str(), 1);
@@ -640,8 +441,6 @@ bool truthCut(std::string input, Long64_t cEvent, int l_0, int l_1,
 	*v_gen_tau_0 = tau_0->P4();
 	*v_gen_tau_1 = tau_1->P4();
 	//___________________________________________
-	chain->Delete();
-	delete treeReader;
 	return true;
 }
 
@@ -958,26 +757,33 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	//___________________________________________
 	//Load data__________________________________
 	std::cout << "Running event selection\n";
-	TFile* inputData = TFile::Open(options["-i"].c_str()); //File containing Delphes-simulated MC data
-	TTree* eventTree = (TTree*)inputData->Get("Delphes");
-	delphesReader* reader = new delphesReader(eventTree);
+	TChain *chain = new TChain("Delphes");
+	chain->Add(options["-i"].c_str());
+	ExRootTreeReader *treeReader = new ExRootTreeReader(chain);
+	TClonesArray *branchElectron = treeReader->UseBranch("Electron");
+	TClonesArray *branchMuon = treeReader->UseBranch("MuonLoose");
+	TClonesArray *branchJet = treeReader->UseBranch("JetPUPPI");
+	TClonesArray *branchMissingET = treeReader->UseBranch("PuppiMissingET");
+	TClonesArray *branchWeights = treeReader->UseBranch("Weight");
 	std::cout << "Data loaded\n";
 	//_______________________________________
 	//Loop through events____________________
-	Long64_t nEvents = reader->fChain->GetEntriesFast();
+	Long64_t nEvents = treeReader->GetEntries();
 	std::cout << "Total number of events in file: " << nEvents << "\n";
-	std::vector<int> taus, electrons, muons;
-	TLorentzVector v_tau_0, v_tau_1, v_higgs_tt, v_mPT;
-	TLorentzVector v_gen_higgs_tt, v_gen_tau_0, v_gen_tau_1;
+	std::vector<int> taus, bJets, electrons, muons;
 	bool addMuon, addElectron;
+	TLorentzVector v_tau_0, v_tau_1, v_bJet_0;
+	Jet* tmpJet;
+	Electron* tmpElectron;
+	Muon* tmpMuon;
+	MissingET* tmpMPT;
+	Weight* tmpWeight;
 	std::cout << "Beginning event loop\n";
 	for (Long64_t cEvent = 0; cEvent < nEvents; cEvent++) {
 		if (debug) std::cout << "Loading event " << cEvent << "\n";
-		Long64_t nEvent = reader->LoadTree(cEvent); //Load next event
+		treeReader->ReadEntry(cEvent); //Load next event
 		if (debug) std::cout << "Event loaded, getting data\n";
-		reader->fChain->GetEntry(cEvent);
 		if (debug) std::cout << "Data loaded\n";
-		if (nEvent < 0) break; //Load next event
 		if (cEvent % 1000 == 0) std::cout << "Loop: " << cEvent << "/" << nEvents << ", " <<
 				100*cEvent/nEvents << "%\n";
 		h_datasetSizes->Fill("All", 1);
@@ -991,43 +797,49 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 		addElectron = false;
 		finalstateSet("mu_tau");
 		if (debug) std::cout << "Running mu tau\n";
-		for (int i = 0; i < reader->Muon_size; i++) { //Loop through muons
-			if (reader->Muon_PT[i] > muPTMin && std::abs(reader->Muon_Eta[i]) < muEtaMax
-					&& reader->Muon_IsolationVar[i] < muIsoMax) { //Quality muon
+		for (int i = 0; i < branchMuon->GetEntries(); i++) { //Loop through muons
+			tmpMuon = (Muon*) branchMuon->At(i);
+			if (tmpMuon->PT > muPTMin && std::abs(tmpMuon->Eta) < muEtaMax
+					&& tmpMuon->IsolationVar < muIsoMax) { //Quality muon
 				muons.push_back(i);
-			}
-		 	else if (reader->Muon_PT[i] > muPTMinAdd && std::abs(reader->Muon_Eta[i]) < muEtaMaxAdd
-					&& reader->Muon_IsolationVar[i] < muIsoMaxAdd) { //Additional muon
+			} else if (tmpMuon->PT > muPTMinAdd && std::abs(tmpMuon->Eta) < muEtaMaxAdd
+					&& tmpMuon->IsolationVar < muIsoMaxAdd) { //Additional muon
 				addMuon = true;
 				break;
 			}
 		}
 		if (muons.size() == 1 && !addMuon) { //One quality muon found and no additional muons
 			h_mu_tau_cutFlow->Fill("Quality #mu", 1);
-			for (int i = 0; i < reader->Electron_size; i++) { //Loop through electrons
-				if (reader->Electron_PT[i] > ePTMinAdd && std::abs(reader->Electron_Eta[i]) < eEtaMaxAdd
-						&& reader->Electron_IsolationVar[i] < eIsoMaxAdd) { //Additional electron
+			tmpMuon = (Muon*) branchMuon->At(muons[0]);
+			for (int i = 0; i < branchElectron->GetEntries(); i++) { //Loop through electrons
+				tmpElectron = (Electron*) branchElectron->At(i);
+				if (tmpElectron->PT > ePTMinAdd && std::abs(tmpElectron->Eta) < eEtaMaxAdd
+						&& tmpElectron->IsolationVar < eIsoMaxAdd) { //Additional electron
 					addElectron = true;
 					break;
 				}
 			}
 			if (!addElectron) { //No additional electrons found
 				h_mu_tau_cutFlow->Fill("1 #mu & 0 e", 1);
-				for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
-					if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
-							&& std::abs(reader->Jet_Eta[i]) < tauEtaMax && reader->Jet_Charge[i] != reader->Muon_Charge[muons[0]]) { //Quality OS tau
+				for (int i = 0; i < branchJet->GetEntries(); i++) { //Loop through jets
+					tmpJet = (Jet*) branchJet->At(i);
+					if (tmpJet->TauTag == 1 && tmpJet->BTag == 0 && tmpJet->PT > tauPTMin
+							&& std::abs(tmpJet->Eta) < tauEtaMax
+							&& tmpJet->Charge != tmpMuon->Charge) { //Quality  OS tau
 						taus.push_back(i);
 					}
 				}
 				if (taus.size() >= 1) {//Quality tau
 					h_mu_tau_cutFlow->Fill("Quality #tau", 1);
-					v_tau_1 = getTauLepton(reader, muons[0], "muon");
-					v_tau_0 = getTauHadron(reader, taus[0]);
-					v_mPT.SetPtEtaPhiM(reader->MissingET_MET[0], 0.0, reader->MissingET_Phi[0], 0.0);
-					v_higgs_tt = getHiggs2Taus(v_mPT, v_tau_0, v_tau_1);
+					v_tau_1 = tmpMuon->P4()
+					tmpJet = (Jet*)branchJet->At(taus[0]);
+					v_tau_0 = tmpJet->P4();
+					tmpMPT = (MissingET*)branchMissingET->At(0);
+					v_higgs_tt = getHiggs2Taus(tmpMPT, v_tau_0, v_tau_1);
 					gen_mctMatch = false;
 					if (options["-t"] == "1") {
-						gen_mctMatch = truthCut(options["-i"], cEvent, //Checks final-state selection was correct
+						gen_mctMatch = truthCut(branchParticle, branchElectron,
+								branchMuon, branchJet,
 								taus[0], muons[0], "tau:muon",
 								&mcTruthPlots, &v_gen_higgs_tt,
 								&v_gen_tau_0, &v_gen_tau_1);
@@ -1048,8 +860,8 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					gen_h_tt_eta = v_gen_higgs_tt.Eta();
 					gen_h_tt_phi = v_gen_higgs_tt.Phi();
 					gen_h_tt_E = v_gen_higgs_tt.E();
-					mPT_pT = reader->MissingET_MET[0];
-					mPT_phi = reader->MissingET_Phi[0];
+					mPT_pT = tmpMPT->MET;
+					mPT_phi = tmpMPT->Phi;
 					t_0_pT = v_tau_0.Pt();
 					t_0_eta = v_tau_0.Eta();
 					t_0_phi = v_tau_0.Phi();
@@ -1064,7 +876,8 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					h_tt_eta = v_higgs_tt.Eta();
 					h_tt_phi = v_higgs_tt.Phi();
 					h_tt_mass = v_higgs_tt.M();
-					weight = (double)*reader->Event_Weight;
+					tmpWeight = (Weight*)branchWeights->At(0);
+					weight = tmpWeight->Weight;
 					mu_tau->Fill();
 					h_datasetSizes->Fill("#mu #tau_{h}", 1);
 					eventAccepted = true;
@@ -1082,43 +895,49 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 		addElectron = false;
 		finalstateSet("e_tau");
 		if (debug) std::cout << "Running e tau\n";
-		for (int i = 0; i < reader->Electron_size; i++) { //Loop through electrons
-			if (reader->Electron_PT[i] > ePTMin && std::abs(reader->Electron_Eta[i]) < eEtaMax
-					&& reader->Electron_IsolationVar[i] < eIsoMax) { //Quality electron
+		for (int i = 0; i < branchElectron->GetEntries(); i++) { //Loop through Electons
+			tmpElectron = (Electron*) branchElectron->At(i);
+			if (tmpElectron->PT > ePTMin && std::abs(tmpElectron->Eta) < eEtaMax
+					&& tmpElectron->IsolationVar < eIsoMax) { //Quality Electron
 				electrons.push_back(i);
-			}
-		 	else if (reader->Electron_PT[i] > ePTMinAdd && std::abs(reader->Electron_Eta[i]) < eEtaMaxAdd
-					&& reader->Electron_IsolationVar[i] < eIsoMaxAdd) { //Additional electon
+			} else if (tmpElectron->PT > ePTMinAdd && std::abs(tmpElectron->Eta) < eEtaMaxAdd
+					&& tmpElectron->IsolationVar < eIsoMaxAdd) { //Additional electon
 				addElectron = true;
 				break;
 			}
 		}
 		if (electrons.size() == 1 && !addElectron) { //One quality electon found and no additional electons
 			h_e_tau_cutFlow->Fill("Quality e", 1);
-			for (int i = 0; i < reader->Muon_size; i++) { //Loop through muons
-				if (reader->Muon_PT[i] > muPTMinAdd && std::abs(reader->Muon_Eta[i]) < muEtaMaxAdd
-						&& reader->Muon_IsolationVar[i] < muIsoMaxAdd) { //Additional muons
+			tmpElectron = (Electron*) branchElectron->At(electrons[0]);
+			for (int i = 0; i < branchMuon->GetEntries(); i++) { //Loop through muons
+				tmpMuon = (Muon*) branchMuon->At(i);
+				if (tmpMuon->PT > muPTMinAdd && std::abs(tmpMuon->Eta) < muEtaMaxAdd
+						&& tmpMuon->IsolationVar < muIsoMaxAdd) { //Additional muon
 					addMuon = true;
 					break;
 				}
 			}
 			if (!addMuon) { //No additional muons found
 				h_e_tau_cutFlow->Fill("1 e & 0 #mu", 1);
-				for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
-					if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
-							&& std::abs(reader->Jet_Eta[i]) < tauEtaMax && reader->Jet_Charge[i] != reader->Electron_Charge[electrons[0]]) { //Quality OS tau
+				for (int i = 0; i < branchJet->GetEntries(); i++) { //Loop through jets
+					tmpJet = (Jet*) branchJet->At(i);
+					if (tmpJet->TauTag == 1 && tmpJet->BTag == 0 && tmpJet->PT > tauPTMin
+							&& std::abs(tmpJet->Eta) < tauEtaMax
+							&& tmpJet->Charge != tmpElectron->Charge) { //Quality  OS tau
 						taus.push_back(i);
 					}
 				}
 				if (taus.size() >= 1) {//Quality tau
 					h_e_tau_cutFlow->Fill("Quality #tau", 1);
-					v_tau_1 = getTauLepton(reader, electrons[0], "electron");
-					v_tau_0 = getTauHadron(reader, taus[0]);
-					v_mPT.SetPtEtaPhiM(reader->MissingET_MET[0], 0.0, reader->MissingET_Phi[0], 0.0);
-					v_higgs_tt = getHiggs2Taus(v_mPT, v_tau_0, v_tau_1);
+					v_tau_1 = tmpElectron->P4()
+					tmpJet = (Jet*)branchJet->At(taus[0]);
+					v_tau_0 = tmpJet->P4();
+					tmpMPT = (MissingET*)branchMissingET->At(0);
+					v_higgs_tt = getHiggs2Taus(tmpMPT, v_tau_0, v_tau_1);
 					gen_mctMatch = false;
 					if (options["-t"] == "1") {
-						gen_mctMatch = truthCut(options["-i"], cEvent, //Checks final-state selection was correct
+						gen_mctMatch = truthCut(branchParticle, branchElectron,
+								branchMuon, branchJet,
 								taus[0], electrons[0], "tau:electron",
 								&mcTruthPlots, &v_gen_higgs_tt,
 								&v_gen_tau_0, &v_gen_tau_1);
@@ -1139,8 +958,8 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					gen_h_tt_eta = v_gen_higgs_tt.Eta();
 					gen_h_tt_phi = v_gen_higgs_tt.Phi();
 					gen_h_tt_E = v_gen_higgs_tt.E();
-					mPT_pT = reader->MissingET_MET[0];
-					mPT_phi = reader->MissingET_Phi[0];
+					mPT_pT = tmpMPT->MET;
+					mPT_phi = tmpMPT->Phi;
 					t_0_pT = v_tau_0.Pt();
 					t_0_eta = v_tau_0.Eta();
 					t_0_phi = v_tau_0.Phi();
@@ -1155,7 +974,8 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					h_tt_eta = v_higgs_tt.Eta();
 					h_tt_phi = v_higgs_tt.Phi();
 					h_tt_mass = v_higgs_tt.M();
-					weight = (double)*reader->Event_Weight;
+					tmpWeight = (Weight*)branchWeights->At(0);
+					weight = tmpWeight->Weight;
 					e_tau->Fill();
 					h_datasetSizes->Fill("e #tau_{h}", 1);
 					eventAccepted = true;
@@ -1173,40 +993,45 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 		addElectron = false;
 		finalstateSet("tau_tau");
 		if (debug) std::cout << "Running tau tau\n";
-		for (int i = 0; i < reader->Electron_size; i++) { //Loop through electrons
-			if (reader->Electron_PT[i] > ePTMinAdd && std::abs(reader->Electron_Eta[i]) < eEtaMaxAdd
-					&& reader->Electron_IsolationVar[i] < eIsoMaxAdd) { //Additional electon
+		for (int i = 0; i < branchElectron->GetEntries(); i++) { //Loop through Electons
+			tmpElectron = (Electron*) branchElectron->At(i);
+			if (tmpElectron->PT > ePTMinAdd && std::abs(tmpElectron->Eta) < eEtaMaxAdd
+					&& tmpElectron->IsolationVar < eIsoMaxAdd) { //Additional electon
 				addElectron = true;
 				break;
 			}
 		}
 		if (!addElectron) { //No additional electons
-			for (int i = 0; i < reader->Muon_size; i++) { //Loop through muons
-				if (reader->Muon_PT[i] > muPTMinAdd && std::abs(reader->Muon_Eta[i]) < muEtaMaxAdd
-						&& reader->Muon_IsolationVar[i] < muIsoMaxAdd) { //Additional muons
+			for (int i = 0; i < branchMuon->GetEntries(); i++) { //Loop through muons
+				tmpMuon = (Muon*) branchMuon->At(i);
+				if (tmpMuon->PT > muPTMinAdd && std::abs(tmpMuon->Eta) < muEtaMaxAdd
+						&& tmpMuon->IsolationVar < muIsoMaxAdd) { //Additional muon
 					addMuon = true;
 					break;
 				}
 			}
 			if (!addMuon) { //No additional muons found
-				h_tau_tau_cutFlow->Fill("0 e & 0 #mu", 1);
-				for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
-					if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
-							&& std::abs(reader->Jet_Eta[i]) < tauEtaMax) { //Quality tau
+				h_tau_tau_b_b_cutFlow->Fill("0 e & 0 #mu", 1);
+				for (int i = 0; i < branchJet->GetEntries(); i++) { //Loop through jets
+					tmpJet = (Jet*) branchJet->At(i);
+					if (tmpJet->TauTag == 1 && tmpJet->BTag == 0 && tmpJet->PT > tauPTMin
+							&& std::abs(tmpJet->Eta) < tauEtaMax) { //Quality tau
 						taus.push_back(i);
 					}
 				}
-				if (taus.size() >= 2) {//Quality tau pair
-					h_tau_tau_cutFlow->Fill("Quality #tau#tau", 1);
-					if (getOSTauTauPair(reader, &taus, &tau_0, &tau_1)) { //OS Tau pair
-						h_tau_tau_cutFlow->Fill("OS", 1);
-						v_tau_1 = getTauHadron(reader, tau_1);
-						v_tau_0 = getTauHadron(reader, tau_0);
-						v_mPT.SetPtEtaPhiM(reader->MissingET_MET[0], 0.0, reader->MissingET_Phi[0], 0.0);
-						v_higgs_tt = getHiggs2Taus(v_mPT, v_tau_0, v_tau_1);
+				if (taus.size() >= 2) {//2 quality taus
+					h_tau_tau_b_b_cutFlow->Fill("Quality #tau#tau", 1);
+					if (getOSTauTauPair(branchJet, &taus, &tau_0, &tau_1)) { //OS Tau pair
+						tmpJet = (Jet*)branchJet->At(tau_0);
+						v_tau_0 = tmpJet->P4();
+						tmpJet = (Jet*)branchJet->At(tau_1);
+						v_tau_1 = tmpElectron->P4();
+						tmpMPT = (MissingET*)branchMissingET->At(0);
+						v_higgs_tt = getHiggs2Taus(tmpMPT, v_tau_0, v_tau_1);
 						gen_mctMatch = false;
 						if (options["-t"] == "1") {
-							gen_mctMatch = truthCut(options["-i"], cEvent, //Checks final-state selection was correct
+							gen_mctMatch = truthCut(branchParticle, branchElectron,
+								branchMuon, branchJet,
 									tau_0, tau_1, "tau:tau",
 									&mcTruthPlots, &v_gen_higgs_tt,
 									&v_gen_tau_0, &v_gen_tau_1);
@@ -1227,8 +1052,8 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 						gen_h_tt_eta = v_gen_higgs_tt.Eta();
 						gen_h_tt_phi = v_gen_higgs_tt.Phi();
 						gen_h_tt_E = v_gen_higgs_tt.E();
-						mPT_pT = reader->MissingET_MET[0];
-						mPT_phi = reader->MissingET_Phi[0];
+						mPT_pT = tmpMPT->MET;
+						mPT_phi = tmpMPT->Phi;
 						t_0_pT = v_tau_0.Pt();
 						t_0_eta = v_tau_0.Eta();
 						t_0_phi = v_tau_0.Phi();
@@ -1243,7 +1068,8 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 						h_tt_eta = v_higgs_tt.Eta();
 						h_tt_phi = v_higgs_tt.Phi();
 						h_tt_mass = v_higgs_tt.M();
-						weight = (double)*reader->Event_Weight;
+						tmpWeight = (Weight*)branchWeights->At(0);
+						weight = tmpWeight->Weight;
 						tau_tau->Fill();
 						h_datasetSizes->Fill("#tau_{h} #tau_{h}", 1);
 						eventAccepted = true;
@@ -1262,45 +1088,50 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 		addElectron = false;
 		finalstateSet("mu_mu");
 		if (debug) std::cout << "Running mu mu\n";
-		for (int i = 0; i < reader->Muon_size; i++) { //Loop through muons
-			if (reader->Muon_PT[i] > muPTMin && std::abs(reader->Muon_Eta[i]) < muEtaMax
-					&& reader->Muon_IsolationVar[i] < muIsoMax) { //Quality muon
+		for (int i = 0; i < branchMuon->GetEntries(); i++) { //Loop through muons
+			tmpMuon = (Muon*) branchMuon->At(i);
+			if (tmpMuon->PT > muPTMin && std::abs(tmpMuon->Eta) < muEtaMax
+					&& tmpMuon->IsolationVar < muIsoMax) { //Quality muon
 				muons.push_back(i);
-			}
-		 	else if (reader->Muon_PT[i] > muPTMinAdd && std::abs(reader->Muon_Eta[i]) < muEtaMaxAdd
-					&& reader->Muon_IsolationVar[i] < muIsoMaxAdd) { //Additional muon
+			} else if (tmpMuon->PT > muPTMinAdd && std::abs(tmpMuon->Eta) < muEtaMaxAdd
+					&& tmpMuon->IsolationVar < muIsoMaxAdd) { //Additional muon
 				addMuon = true;
 				break;
 			}
 		}
 		if (muons.size() == 2 && !addMuon && 
-			reader->Muon_Charge[muons[0]] != reader->Muon_Charge[muons[1]]) { //One quality OS muon pair found and no additional muons
+			((Muon*)branchMuon->At(muons[0]))->Charge != ((Muon*)branchMuon->At(muons[1]))->Charge) { //One quality OS muon pair found and no additional muons
 			h_mu_mu_cutFlow->Fill("Quality #mu#mu", 1);
-			for (int i = 0; i < reader->Electron_size; i++) { //Loop through electrons
-				if (reader->Electron_PT[i] > ePTMinAdd && std::abs(reader->Electron_Eta[i]) < eEtaMaxAdd
-						&& reader->Electron_IsolationVar[i] < eIsoMaxAdd) { //Additional electron
+			for (int i = 0; i < branchElectron->GetEntries(); i++) { //Loop through electrons
+				tmpElectron = (Electron*) branchElectron->At(i);
+				if (tmpElectron->PT > ePTMinAdd && std::abs(tmpElectron->Eta) < eEtaMaxAdd
+						&& tmpElectron->IsolationVar < eIsoMaxAdd) { //Additional electron
 					addElectron = true;
 					break;
 				}
 			}
 			if (!addElectron) { //No additional electrons found
 				h_mu_mu_cutFlow->Fill("2 #mu & 0 e", 1);
-				for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
-					if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
-							&& std::abs(reader->Jet_Eta[i]) < tauEtaMax) { //Quality tau
+				for (int i = 0; i < branchJet->GetEntries(); i++) { //Loop through jets
+					tmpJet = (Jet*) branchJet->At(i);
+					if (tmpJet->TauTag == 1 && tmpJet->BTag == 0 && tmpJet->PT > tauPTMin
+							&& std::abs(tmpJet->Eta) < tauEtaMax) { //Quality tau
 						taus.push_back(i);
 						break;
 					}
 				}
 				if (taus.size() == 0) {//No taus
 					h_mu_mu_cutFlow->Fill("0 #tau", 1);
-					v_tau_1 = getTauLepton(reader, muons[1], "muon");
-					v_tau_0 = getTauLepton(reader, muons[0], "muon");
-					v_mPT.SetPtEtaPhiM(reader->MissingET_MET[0], 0.0, reader->MissingET_Phi[0], 0.0);
-					v_higgs_tt = getHiggs2Taus(v_mPT, v_tau_0, v_tau_1);
+					tmpMuon = (Muon*) branchMuon->At(muons[0]);
+					v_tau_0 = tmpMuon->P4();
+					tmpMuon = (Muon*) branchMuon->At(muons[1]);
+					v_tau_1 = tmpMuon->P4();
+					tmpMPT = (MissingET*)branchMissingET->At(0);
+					v_higgs_tt = getHiggs2Taus(tmpMPT, v_tau_0, v_tau_1);
 					gen_mctMatch = false;
 					if (options["-t"] == "1") {
-						gen_mctMatch = truthCut(options["-i"], cEvent, //Checks final-state selection was correct
+						gen_mctMatch = truthCut(branchParticle, branchElectron,
+								branchMuon, branchJet,
 								muons[0], muons[1], "muon:muon",
 								&mcTruthPlots, &v_gen_higgs_tt,
 								&v_gen_tau_0, &v_gen_tau_1);
@@ -1325,8 +1156,8 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					t_0_eta = v_tau_0.Eta();
 					t_0_phi = v_tau_0.Phi();
 					t_0_mass = muMass;
-					mPT_pT = reader->MissingET_MET[0];
-					mPT_phi = reader->MissingET_Phi[0];
+					mPT_pT = tmpMPT->MET;
+					mPT_phi = tmpMPT->Phi;
 					t_0_mT = getMT(t_0_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_0, v_mPT));
 					t_1_pT = v_tau_1.Pt();
 					t_1_eta = v_tau_1.Eta();
@@ -1337,7 +1168,8 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					h_tt_eta = v_higgs_tt.Eta();
 					h_tt_phi = v_higgs_tt.Phi();
 					h_tt_mass = v_higgs_tt.M();
-					weight = (double)*reader->Event_Weight;
+					tmpWeight = (Weight*)branchWeights->At(0);
+					weight = tmpWeight->Weight;
 					mu_mu->Fill();
 					h_datasetSizes->Fill("#mu #mu", 1);
 					eventAccepted = true;
@@ -1355,49 +1187,52 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 		addElectron = false;
 		finalstateSet("e_mu");
 		if (debug) std::cout << "Running e mu\n";
-		for (int i = 0; i < reader->Muon_size; i++) { //Loop through muons
-			if (reader->Muon_PT[i] > muPTMin && std::abs(reader->Muon_Eta[i]) < muEtaMax
-					&& reader->Muon_IsolationVar[i] < muIsoMax) { //Quality muon
+		for (int i = 0; i < branchMuon->GetEntries(); i++) { //Loop through muons
+			tmpMuon = (Muon*) branchMuon->At(i);
+			if (tmpMuon->PT > muPTMin && std::abs(tmpMuon->Eta) < muEtaMax
+					&& tmpMuon->IsolationVar < muIsoMax) { //Quality muon
 				muons.push_back(i);
-			}
-		 	else if (reader->Muon_PT[i] > muPTMinAdd && std::abs(reader->Muon_Eta[i]) < muEtaMaxAdd
-					&& reader->Muon_IsolationVar[i] < muIsoMaxAdd) { //Additional muon
+			} else if (tmpMuon->PT > muPTMinAdd && std::abs(tmpMuon->Eta) < muEtaMaxAdd
+					&& tmpMuon->IsolationVar < muIsoMaxAdd) { //Additional muon
 				addMuon = true;
 				break;
 			}
 		}
 		if (muons.size() == 1 && !addMuon) { //One quality muon found and no additional muons
 			h_e_mu_cutFlow->Fill("Quality #mu", 1);
-			for (int i = 0; i < reader->Electron_size; i++) { //Loop through electrons
-				if (reader->Electron_PT[i] > ePTMin && std::abs(reader->Electron_Eta[i]) < eEtaMax
-						&& reader->Electron_IsolationVar[i] < eIsoMax
-						&& reader->Electron_Charge[i] != reader->Muon_Charge[muons[0]]) { //Quality OS electron
+			for (int i = 0; i < branchElectron->GetEntries(); i++) { //Loop through Electons
+				tmpElectron = (Electron*) branchElectron->At(i);
+				if (tmpElectron->PT > ePTMin && std::abs(tmpElectron->Eta) < eEtaMax
+						&& tmpElectron->IsolationVar < eIsoMax) { //Quality Electron
 					electrons.push_back(i);
-				}
-			 	else if (reader->Electron_PT[i] > ePTMinAdd && std::abs(reader->Electron_Eta[i]) < eEtaMaxAdd
-						&& reader->Electron_IsolationVar[i] < eIsoMaxAdd) { //Additional electon
+				} else if (tmpElectron->PT > ePTMinAdd && std::abs(tmpElectron->Eta) < eEtaMaxAdd
+						&& tmpElectron->IsolationVar < eIsoMaxAdd) { //Additional electon
 					addElectron = true;
 					break;
 				}
 			}
 			if (electrons.size() == 1 && !addElectron) { //No additional electrons found
 				h_e_mu_cutFlow->Fill("1 #mu & 1 e", 1);
-				for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
-					if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
-							&& std::abs(reader->Jet_Eta[i]) < tauEtaMax) { //Quality tau
+				for (int i = 0; i < branchJet->GetEntries(); i++) { //Loop through jets
+					tmpJet = (Jet*) branchJet->At(i);
+					if (tmpJet->TauTag == 1 && tmpJet->BTag == 0 && tmpJet->PT > tauPTMin
+							&& std::abs(tmpJet->Eta) < tauEtaMax) { //Quality tau
 						taus.push_back(i);
 						break;
 					}
 				}
 				if (taus.size() == 0) {//No taus
 					h_e_mu_cutFlow->Fill("0 #tau", 1);
-					v_tau_1 = getTauLepton(reader, electrons[0], "electron");
-					v_tau_0 = getTauLepton(reader, muons[0], "muon");
-					v_mPT.SetPtEtaPhiM(reader->MissingET_MET[0], 0.0, reader->MissingET_Phi[0], 0.0);
-					v_higgs_tt = getHiggs2Taus(v_mPT, v_tau_0, v_tau_1);
+					tmpMuon = (Muon*) branchMuon->At(muons[0]);
+					v_tau_0 = tmpMuon->P4();
+					tmpElectron = (Electon*) branchElectron->At(electrons[1]);
+					v_tau_1 = tmpElectron->P4();
+					tmpMPT = (MissingET*)branchMissingET->At(0);
+					v_higgs_tt = getHiggs2Taus(tmpMPT, v_tau_0, v_tau_1);
 					gen_mctMatch = false;
 					if (options["-t"] == "1") {
-						gen_mctMatch = truthCut(options["-i"], cEvent, //Checks final-state selection was correct
+						gen_mctMatch = truthCut(branchParticle, branchElectron,
+								branchMuon, branchJet,
 								muons[0], electrons[0], "muon:electron",
 								&mcTruthPlots, &v_gen_higgs_tt,
 								&v_gen_tau_0, &v_gen_tau_1);
@@ -1418,8 +1253,8 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					gen_h_tt_eta = v_gen_higgs_tt.Eta();
 					gen_h_tt_phi = v_gen_higgs_tt.Phi();
 					gen_h_tt_E = v_gen_higgs_tt.E();
-					mPT_pT = reader->MissingET_MET[0];
-					mPT_phi = reader->MissingET_Phi[0];
+					mPT_pT = tmpMPT->MET;
+					mPT_phi = tmpMPT->Phi;
 					t_0_pT = v_tau_0.Pt();
 					t_0_eta = v_tau_0.Eta();
 					t_0_phi = v_tau_0.Phi();
@@ -1434,7 +1269,8 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					h_tt_eta = v_higgs_tt.Eta();
 					h_tt_phi = v_higgs_tt.Phi();
 					h_tt_mass = v_higgs_tt.M();
-					weight = (double)*reader->Event_Weight;
+					tmpWeight = (Weight*)branchWeights->At(0);
+					weight = tmpWeight->Weight;
 					mu_mu->Fill();
 					h_datasetSizes->Fill("e #mu", 1);
 					eventAccepted = true;
@@ -1452,45 +1288,50 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 		addElectron = false;
 		finalstateSet("e_e");
 		if (debug) std::cout << "Running e e\n";
-		for (int i = 0; i < reader->Electron_size; i++) { //Loop through electrons
-			if (reader->Electron_PT[i] > ePTMin && std::abs(reader->Electron_Eta[i]) < eEtaMax
-					&& reader->Electron_IsolationVar[i] < eIsoMax) { //Quality electron
+		for (int i = 0; i < branchElectron->GetEntries(); i++) { //Loop through Electons
+			tmpElectron = (Electron*) branchElectron->At(i);
+			if (tmpElectron->PT > ePTMin && std::abs(tmpElectron->Eta) < eEtaMax
+					&& tmpElectron->IsolationVar < eIsoMax) { //Quality Electron
 				electrons.push_back(i);
-			}
-		 	else if (reader->Electron_PT[i] > ePTMinAdd && std::abs(reader->Electron_Eta[i]) < eEtaMaxAdd
-					&& reader->Electron_IsolationVar[i] < eIsoMaxAdd) { //Additional electon
+			} else if (tmpElectron->PT > ePTMinAdd && std::abs(tmpElectron->Eta) < eEtaMaxAdd
+					&& tmpElectron->IsolationVar < eIsoMaxAdd) { //Additional electon
 				addElectron = true;
 				break;
 			}
 		}
 		if (electrons.size() == 2 && !addElectron && 
-			reader->Electron_Charge[electrons[0]] != reader->Electron_Charge[electrons[1]]) { //One quality OS electron pair found and no additional electrons
+			((Electron*)branchElectron->At(electrons[0]))->Charge != ((Electron*)branchElectron->At(electrons[1]))->Charge) { //One quality OS electron pair found and no additional electrons
 			h_e_e_cutFlow->Fill("Quality ee", 1);
-			for (int i = 0; i < reader->Muon_size; i++) { //Loop through muons
-				if (reader->Muon_PT[i] > muPTMinAdd && std::abs(reader->Muon_Eta[i]) < muEtaMaxAdd
-						&& reader->Muon_IsolationVar[i] < muIsoMaxAdd) { //Additional muons
+			for (int i = 0; i < branchMuon->GetEntries(); i++) { //Loop through muons
+				tmpMuon = (Muon*) branchMuon->At(i);
+				if (tmpMuon->PT > muPTMinAdd && std::abs(tmpMuon->Eta) < muEtaMaxAdd
+						&& tmpMuon->IsolationVar < muIsoMaxAdd) { //Additional muon
 					addMuon = true;
 					break;
 				}
 			}
 			if (!addMuon) { //No additional muons found
 				h_e_e_cutFlow->Fill("2 e & 0 #mu", 1);
-				for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
-					if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
-							&& std::abs(reader->Jet_Eta[i]) < tauEtaMax) { //Quality tau
+				for (int i = 0; i < branchJet->GetEntries(); i++) { //Loop through jets
+					tmpJet = (Jet*) branchJet->At(i);
+					if (tmpJet->TauTag == 1 && tmpJet->BTag == 0 && tmpJet->PT > tauPTMin
+							&& std::abs(tmpJet->Eta) < tauEtaMax) { //Quality tau
 						taus.push_back(i);
 						break;
 					}
 				}
 				if (taus.size() == 0) {//No taus
 					h_e_e_cutFlow->Fill("0 #tau", 1);
-					v_tau_1 = getTauLepton(reader, electrons[1], "electron");
-					v_tau_0 = getTauLepton(reader, electrons[0], "electron");
-					v_mPT.SetPtEtaPhiM(reader->MissingET_MET[0], 0.0, reader->MissingET_Phi[0], 0.0);
-					v_higgs_tt = getHiggs2Taus(v_mPT, v_tau_0, v_tau_1);
+					tmpElectron = (Electron*) branchElectron->At(electrons[0]);
+					v_tau_0 = tmpElectron->P4();
+					tmpElectron = (Electron*) branchElectron->At(electrons[1]);
+					v_tau_1 = tmpElectron->P4();
+					tmpMPT = (MissingET*)branchMissingET->At(0);
+					v_higgs_tt = getHiggs2Taus(tmpMPT, v_tau_0, v_tau_1);
 					gen_mctMatch = false;
 					if (options["-t"] == "1") {
-						gen_mctMatch = truthCut(options["-i"], cEvent, //Checks final-state selection was correct
+						gen_mctMatch = truthCut(branchParticle, branchElectron,
+								branchMuon, branchJet,
 								electrons[0], electrons[1], "electron:electron",
 								&mcTruthPlots, &v_gen_higgs_tt,
 								&v_gen_tau_0, &v_gen_tau_1);
@@ -1511,8 +1352,8 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					gen_h_tt_eta = v_gen_higgs_tt.Eta();
 					gen_h_tt_phi = v_gen_higgs_tt.Phi();
 					gen_h_tt_E = v_gen_higgs_tt.E();
-					mPT_pT = reader->MissingET_MET[0];
-					mPT_phi = reader->MissingET_Phi[0];
+					mPT_pT = tmpMPT->MET;
+					mPT_phi = tmpMPT->Phi;
 					t_0_pT = v_tau_0.Pt();
 					t_0_eta = v_tau_0.Eta();
 					t_0_phi = v_tau_0.Phi();
@@ -1527,20 +1368,17 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					h_tt_eta = v_higgs_tt.Eta();
 					h_tt_phi = v_higgs_tt.Phi();
 					h_tt_mass = v_higgs_tt.M();
-					weight = (double)*reader->Event_Weight;
+					tmpWeight = (Weight*)branchWeights->At(0);
+					weight = tmpWeight->Weight;
 					e_e->Fill();
 					h_datasetSizes->Fill("e e", 1);
 					eventAccepted = true;
 				}
 			}
 		}
-		//___________________________________
-		std::cout << "Event loop complete\n";
-		eventTree->Delete();
-		inputData->Close();
-		delete reader;
 	}
-	std::cout << "All files complete\n";
+	//___________________________________
+	std::cout << "Event loop complete\n";
 	//___________________________________________
 	//Writing plots______________________________
 	TFile* outputFile = new TFile(("../outputs/" + outputName + "/" + outputName + ".root").c_str(), "recreate");
