@@ -928,7 +928,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 				}
 				if (taus.size() >= 1) {//Quality tau
 					h_e_tau_cutFlow->Fill("Quality #tau", 1);
-					v_tau_1 = tmpElectron->P4()
+					v_tau_1 = tmpElectron->P4();
 					tmpJet = (Jet*)branchJet->At(taus[0]);
 					v_tau_0 = tmpJet->P4();
 					tmpMPT = (MissingET*)branchMissingET->At(0);
