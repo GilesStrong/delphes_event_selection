@@ -21,7 +21,7 @@ bool getOSTauLeptonPair(delphesReader* reader, std::vector<int>* taus,	std::vect
 					pairs.push_back(std::make_pair(t, l));
 				}
 			} else {
-				if (reader->Jet_Charge[t] != reader->MuonLoose_Charge[l]) {
+				if (reader->Jet_Charge[t] != reader->Muon_Charge[l]) {
 					pairs.push_back(std::make_pair(t, l));
 				}
 			}
@@ -37,7 +37,7 @@ bool getOSTauLeptonPair(delphesReader* reader, std::vector<int>* taus,	std::vect
 				if (electron) {
 					pT = std::abs(reader->Jet_PT[p.first])+std::abs(reader->Electron_PT[p.second]);
 				} else {
-					pT = std::abs(reader->Jet_PT[p.first])+std::abs(reader->MuonLoose_PT[p.second]);
+					pT = std::abs(reader->Jet_PT[p.first])+std::abs(reader->Muon_PT[p.second]);
 				}
 				if (pT > highestPT) {
 					best = p;
@@ -63,14 +63,14 @@ bool getOSLeptonLeptonPair(delphesReader* reader, std::vector<int>* electrons,
 		for (int m0 : *muons) { //Loop through muons
 			for (int m1 : *muons) {
 				if (m0 == m1) continue;
-				if (reader->MuonLoose_Charge[m0] != reader->MuonLoose_Charge[m1]) {
+				if (reader->Muon_Charge[m0] != reader->Muon_Charge[m1]) {
 					pairs.push_back(std::make_pair(m0, m1));
 				}
 			}
 			if (pairs.size() == 1) { //Only one OS pair found
 				*lepton_0 = pairs[0].first;
 				*lepton_1 = pairs[0].second;
-				if (reader->MuonLoose_PT[*lepton_0] < reader->MuonLoose_PT[*lepton_1]) { //Order muons by pT
+				if (reader->Muon_PT[*lepton_0] < reader->Muon_PT[*lepton_1]) { //Order muons by pT
 					*lepton_1 = pairs[0].first;
 					*lepton_0 = pairs[0].second;
 				}
@@ -79,7 +79,7 @@ bool getOSLeptonLeptonPair(delphesReader* reader, std::vector<int>* electrons,
 				double pT, highestPT = 0;
 				std::pair<int, int> best;
 				for (std::pair<int, int> p : pairs) { //Loop through pairs
-					pT = std::abs(reader->MuonLoose_PT[p.first])+std::abs(reader->MuonLoose_PT[p.second]);
+					pT = std::abs(reader->Muon_PT[p.first])+std::abs(reader->Muon_PT[p.second]);
 					if (pT > highestPT) {
 						best = p;
 						highestPT = pT;
@@ -87,7 +87,7 @@ bool getOSLeptonLeptonPair(delphesReader* reader, std::vector<int>* electrons,
 				}
 				*lepton_0 = best.first;
 				*lepton_1 = best.second;
-				if (reader->MuonLoose_PT[*lepton_0] < reader->MuonLoose_PT[*lepton_1]) { //Order muons by pT
+				if (reader->Muon_PT[*lepton_0] < reader->Muon_PT[*lepton_1]) { //Order muons by pT
 					*lepton_1 = best.first;
 					*lepton_0 = best.second;
 				}
@@ -138,7 +138,7 @@ bool getOSLeptonLeptonPair(delphesReader* reader, std::vector<int>* electrons,
 	} else if (mode == "mixed") {
 		for (int m : *muons) { //Loop through muons
 			for (int e : *electrons) { //Loop through electrons
-				if (reader->MuonLoose_Charge[m] != reader->Electron_Charge[e]) {
+				if (reader->Muon_Charge[m] != reader->Electron_Charge[e]) {
 					pairs.push_back(std::make_pair(m, e));
 				}
 			}
@@ -150,7 +150,7 @@ bool getOSLeptonLeptonPair(delphesReader* reader, std::vector<int>* electrons,
 				double pT, highestPT = 0;
 				std::pair<int, int> best;
 				for (std::pair<int, int> p : pairs) { //Loop through pairs
-					pT = std::abs(reader->MuonLoose_PT[p.first])+std::abs(reader->Electron_PT[p.second]);
+					pT = std::abs(reader->Muon_PT[p.first])+std::abs(reader->Electron_PT[p.second]);
 					if (pT > highestPT) {
 						best = p;
 						highestPT = pT;
@@ -226,9 +226,9 @@ int getNElectrons(delphesReader* reader) {
 int getNMuons(delphesReader* reader) {
 	/*Returns number of reco. muons in event*/
 	int nMuons = 0;
-	for (int i = 0; i < reader->MuonLoose_size; i++) { //Loop through muons
-		if (reader->MuonLoose_PT[i] > muPTMinAdd && std::abs(reader->MuonLoose_Eta[i]) < muEtaMaxAdd
-				&& reader->MuonLoose_IsolationVar[i] < muIsoMaxAdd) { //Quality muon
+	for (int i = 0; i < reader->Muon_size; i++) { //Loop through muons
+		if (reader->Muon_PT[i] > muPTMinAdd && std::abs(reader->Muon_Eta[i]) < muEtaMaxAdd
+				&& reader->Muon_IsolationVar[i] < muIsoMaxAdd) { //Quality muon
 			nMuons++;
 		}
 	}
@@ -248,7 +248,7 @@ TLorentzVector getTauLepton(delphesReader* reader, int lepton, std::string mode)
 	if (mode == "electron") {
 		l.SetPtEtaPhiM(reader->Electron_PT[lepton], reader->Electron_Eta[lepton], reader->Electron_Phi[lepton], eMass);
 	} else if (mode == "muon"){
-		l.SetPtEtaPhiM(reader->MuonLoose_PT[lepton], reader->MuonLoose_Eta[lepton], reader->MuonLoose_Phi[lepton], muMass);
+		l.SetPtEtaPhiM(reader->Muon_PT[lepton], reader->Muon_Eta[lepton], reader->Muon_Phi[lepton], muMass);
 	}
 	return l;
 }
@@ -508,7 +508,7 @@ bool truthCut(std::string input, Long64_t cEvent, int l_0, int l_1,
 	ExRootTreeReader *treeReader = new ExRootTreeReader(chain);
 	TClonesArray *branchParticle = treeReader->UseBranch("Particle");
 	TClonesArray *branchElectron = treeReader->UseBranch("Electron");
-	TClonesArray *branchMuon = treeReader->UseBranch("MuonLoose");
+	TClonesArray *branchMuon = treeReader->UseBranch("Muon");
 	TClonesArray *branchJet = treeReader->UseBranch("Jet");
 	treeReader->ReadEntry(cEvent);
 	if (debug) std::cout << "Loading data for MC truth cut on event mode " << mode << "\n";
@@ -992,13 +992,13 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 		addElectron = false;
 		finalstateSet("mu_tau");
 		if (debug) std::cout << "Running mu tau\n";
-		for (int i = 0; i < reader->MuonLoose_size; i++) { //Loop through muons
-			if (reader->MuonLoose_PT[i] > muPTMin && std::abs(reader->MuonLoose_Eta[i]) < muEtaMax
-					&& reader->MuonLoose_IsolationVar[i] < muIsoMax) { //Quality muon
+		for (int i = 0; i < reader->Muon_size; i++) { //Loop through muons
+			if (reader->Muon_PT[i] > muPTMin && std::abs(reader->Muon_Eta[i]) < muEtaMax
+					&& reader->Muon_IsolationVar[i] < muIsoMax) { //Quality muon
 				muons.push_back(i);
 			}
-		 	else if (reader->MuonLoose_PT[i] > muPTMinAdd && std::abs(reader->MuonLoose_Eta[i]) < muEtaMaxAdd
-					&& reader->MuonLoose_IsolationVar[i] < muIsoMaxAdd) { //Additional muon
+		 	else if (reader->Muon_PT[i] > muPTMinAdd && std::abs(reader->Muon_Eta[i]) < muEtaMaxAdd
+					&& reader->Muon_IsolationVar[i] < muIsoMaxAdd) { //Additional muon
 				addMuon = true;
 				break;
 			}
@@ -1016,7 +1016,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 				h_mu_tau_cutFlow->Fill("1 #mu & 0 e", 1);
 				for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
 					if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
-							&& std::abs(reader->Jet_Eta[i]) < tauEtaMax && reader->Jet_Charge[i] != reader->MuonLoose_Charge[muons[0]]) { //Quality OS tau
+							&& std::abs(reader->Jet_Eta[i]) < tauEtaMax && reader->Jet_Charge[i] != reader->Muon_Charge[muons[0]]) { //Quality OS tau
 						taus.push_back(i);
 					}
 				}
@@ -1096,9 +1096,9 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 		}
 		if (electrons.size() == 1 && !addElectron) { //One quality electon found and no additional electons
 			h_e_tau_cutFlow->Fill("Quality e", 1);
-			for (int i = 0; i < reader->MuonLoose_size; i++) { //Loop through muons
-				if (reader->MuonLoose_PT[i] > muPTMinAdd && std::abs(reader->MuonLoose_Eta[i]) < muEtaMaxAdd
-						&& reader->MuonLoose_IsolationVar[i] < muIsoMaxAdd) { //Additional muons
+			for (int i = 0; i < reader->Muon_size; i++) { //Loop through muons
+				if (reader->Muon_PT[i] > muPTMinAdd && std::abs(reader->Muon_Eta[i]) < muEtaMaxAdd
+						&& reader->Muon_IsolationVar[i] < muIsoMaxAdd) { //Additional muons
 					addMuon = true;
 					break;
 				}
@@ -1182,9 +1182,9 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 			}
 		}
 		if (!addElectron) { //No additional electons
-			for (int i = 0; i < reader->MuonLoose_size; i++) { //Loop through muons
-				if (reader->MuonLoose_PT[i] > muPTMinAdd && std::abs(reader->MuonLoose_Eta[i]) < muEtaMaxAdd
-						&& reader->MuonLoose_IsolationVar[i] < muIsoMaxAdd) { //Additional muons
+			for (int i = 0; i < reader->Muon_size; i++) { //Loop through muons
+				if (reader->Muon_PT[i] > muPTMinAdd && std::abs(reader->Muon_Eta[i]) < muEtaMaxAdd
+						&& reader->Muon_IsolationVar[i] < muIsoMaxAdd) { //Additional muons
 					addMuon = true;
 					break;
 				}
@@ -1263,19 +1263,19 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 		addElectron = false;
 		finalstateSet("mu_mu");
 		if (debug) std::cout << "Running mu mu\n";
-		for (int i = 0; i < reader->MuonLoose_size; i++) { //Loop through muons
-			if (reader->MuonLoose_PT[i] > muPTMin && std::abs(reader->MuonLoose_Eta[i]) < muEtaMax
-					&& reader->MuonLoose_IsolationVar[i] < muIsoMax) { //Quality muon
+		for (int i = 0; i < reader->Muon_size; i++) { //Loop through muons
+			if (reader->Muon_PT[i] > muPTMin && std::abs(reader->Muon_Eta[i]) < muEtaMax
+					&& reader->Muon_IsolationVar[i] < muIsoMax) { //Quality muon
 				muons.push_back(i);
 			}
-		 	else if (reader->MuonLoose_PT[i] > muPTMinAdd && std::abs(reader->MuonLoose_Eta[i]) < muEtaMaxAdd
-					&& reader->MuonLoose_IsolationVar[i] < muIsoMaxAdd) { //Additional muon
+		 	else if (reader->Muon_PT[i] > muPTMinAdd && std::abs(reader->Muon_Eta[i]) < muEtaMaxAdd
+					&& reader->Muon_IsolationVar[i] < muIsoMaxAdd) { //Additional muon
 				addMuon = true;
 				break;
 			}
 		}
 		if (muons.size() == 2 && !addMuon && 
-			reader->MuonLoose_Charge[muons[0]] != reader->MuonLoose_Charge[muons[1]]) { //One quality OS muon pair found and no additional muons
+			reader->Muon_Charge[muons[0]] != reader->Muon_Charge[muons[1]]) { //One quality OS muon pair found and no additional muons
 			h_mu_mu_cutFlow->Fill("Quality #mu#mu", 1);
 			for (int i = 0; i < reader->Electron_size; i++) { //Loop through electrons
 				if (reader->Electron_PT[i] > ePTMinAdd && std::abs(reader->Electron_Eta[i]) < eEtaMaxAdd
@@ -1356,13 +1356,13 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 		addElectron = false;
 		finalstateSet("e_mu");
 		if (debug) std::cout << "Running e mu\n";
-		for (int i = 0; i < reader->MuonLoose_size; i++) { //Loop through muons
-			if (reader->MuonLoose_PT[i] > muPTMin && std::abs(reader->MuonLoose_Eta[i]) < muEtaMax
-					&& reader->MuonLoose_IsolationVar[i] < muIsoMax) { //Quality muon
+		for (int i = 0; i < reader->Muon_size; i++) { //Loop through muons
+			if (reader->Muon_PT[i] > muPTMin && std::abs(reader->Muon_Eta[i]) < muEtaMax
+					&& reader->Muon_IsolationVar[i] < muIsoMax) { //Quality muon
 				muons.push_back(i);
 			}
-		 	else if (reader->MuonLoose_PT[i] > muPTMinAdd && std::abs(reader->MuonLoose_Eta[i]) < muEtaMaxAdd
-					&& reader->MuonLoose_IsolationVar[i] < muIsoMaxAdd) { //Additional muon
+		 	else if (reader->Muon_PT[i] > muPTMinAdd && std::abs(reader->Muon_Eta[i]) < muEtaMaxAdd
+					&& reader->Muon_IsolationVar[i] < muIsoMaxAdd) { //Additional muon
 				addMuon = true;
 				break;
 			}
@@ -1372,7 +1372,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 			for (int i = 0; i < reader->Electron_size; i++) { //Loop through electrons
 				if (reader->Electron_PT[i] > ePTMin && std::abs(reader->Electron_Eta[i]) < eEtaMax
 						&& reader->Electron_IsolationVar[i] < eIsoMax
-						&& reader->Electron_Charge[i] != reader->MuonLoose_Charge[muons[0]]) { //Quality OS electron
+						&& reader->Electron_Charge[i] != reader->Muon_Charge[muons[0]]) { //Quality OS electron
 					electrons.push_back(i);
 				}
 			 	else if (reader->Electron_PT[i] > ePTMinAdd && std::abs(reader->Electron_Eta[i]) < eEtaMaxAdd
@@ -1467,9 +1467,9 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 		if (electrons.size() == 2 && !addElectron && 
 			reader->Electron_Charge[electrons[0]] != reader->Electron_Charge[electrons[1]]) { //One quality OS electron pair found and no additional electrons
 			h_e_e_cutFlow->Fill("Quality ee", 1);
-			for (int i = 0; i < reader->MuonLoose_size; i++) { //Loop through muons
-				if (reader->MuonLoose_PT[i] > muPTMinAdd && std::abs(reader->MuonLoose_Eta[i]) < muEtaMaxAdd
-						&& reader->MuonLoose_IsolationVar[i] < muIsoMaxAdd) { //Additional muons
+			for (int i = 0; i < reader->Muon_size; i++) { //Loop through muons
+				if (reader->Muon_PT[i] > muPTMinAdd && std::abs(reader->Muon_Eta[i]) < muEtaMaxAdd
+						&& reader->Muon_IsolationVar[i] < muIsoMaxAdd) { //Additional muons
 					addMuon = true;
 					break;
 				}
