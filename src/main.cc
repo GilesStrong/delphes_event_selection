@@ -253,55 +253,6 @@ TLorentzVector getTauLepton(delphesReader* reader, int lepton, std::string mode)
 	return l;
 }
 
-TLorentzVector getBJet(delphesReader* reader, int bJet) {
-	/*Returns 4-vector of b-jet*/
-	TLorentzVector b;
-	b.SetPtEtaPhiM(reader->Jet_PT[bJet], reader->Jet_Eta[bJet], reader->Jet_Phi[bJet], reader->Jet_Mass[bJet]);
-	return b;
-}
-
-bool selectBJets(delphesReader* reader, std::vector<int>* bJets, int* bJet_0, int* bJet_1) {
-	/*Checks is a pair of b-jets exists, returning true if so and pointing bJet_0 and bJet_1 to
-	selected jets. Selects pair of jets invariant mass closest to 125 GeV*/
-	if (bJets->size() == 2) { //Only two b jets found
-		*bJet_0 = (*bJets)[0];
-		*bJet_1 = (*bJets)[1];
-		if (getBJet(reader, *bJet_0).Pt() < getBJet(reader, *bJet_1).Pt()) {
-			*bJet_1 = (*bJets)[0];
-			*bJet_0 = (*bJets)[1];
-		}
-		return true;
-	} else if (bJets->size() > 2) { //More than two b jets: select pair with invariant mass closest to 125 GeV
-		double deltaMin = -1;
-		double delta;
-		TLorentzVector jet_i, jet_j, jet_combined;
-		int iMin, jMin;
-		for (int i : *bJets) {
-			jet_i = getBJet(reader, i);
-			for (int j : *bJets) {
-				if (i == j) continue;
-				jet_j = getBJet(reader, j);
-				jet_combined = jet_i + jet_j;
-				delta = std::abs(125-jet_combined.M());
-				if (deltaMin > delta || deltaMin < 0) {
-					deltaMin = delta;
-					iMin = i;
-					jMin = j;
-				}
-			}
-		}
-		*bJet_0 = iMin;
-		*bJet_1 = jMin;
-		if (getBJet(reader, *bJet_0).Pt() < getBJet(reader, *bJet_1).Pt()) {
-			*bJet_1 = iMin;
-			*bJet_0 = jMin;
-		}
-		return true;
-	} else { //Less than two b jets found
-		return false;
-	}
-}
-
 void makeDirs(std::string outputName) {
 	/*Makes directory structure for saving outputs*/
 	std::vector<std::string> dirs;
@@ -312,32 +263,11 @@ void makeDirs(std::string outputName) {
 	}
 }
 
-TLorentzVector getHiggs2Taus(delphesReader* reader, TLorentzVector t_0, TLorentzVector t_1) {
+TLorentzVector getHiggs2Taus(TLorentzVector mPT, TLorentzVector t_0, TLorentzVector t_1) {
 	/*Returns 4-vector of Higgs->tau tau*/
-	TLorentzVector higgs, mPT;
-	mPT.SetPtEtaPhiM(reader->MissingET_MET[0], 0.0, reader->MissingET_Phi[0], 0.0); //TODO Check this
+	TLorentzVector higgs;
 	higgs = t_0 + t_1 + mPT;
 	return higgs;
-}
-
-inline TLorentzVector getHiggs2Bs(TLorentzVector b_0, TLorentzVector b_1) {
-	/*Returns 4-vector of Higgs->b b*/
-	return b_0 + b_1;
-}
-
-inline TLorentzVector getDiHiggs(TLorentzVector higgs_0, TLorentzVector higgs_1) {
-	/*Returns 4-vector of di_Higgs*/
-	return higgs_0 + higgs_1;
-}
-
-int getBin(std::vector<double> edges, double value) {
-	/*Returns bin number*/
-	for (int i = 1; i < edges.size(); i++) {
-		if (value < edges[i]) {
-			return i-1;
-		}
-	}
-	return edges.size()-1;
 }
 
 inline double getMT(double pT, double mPT, double dphi) {
@@ -506,66 +436,13 @@ int ancestrySearch(GenParticle* child, GenParticle* parent_0, GenParticle* paren
 	return ancestor;
 }
 
-bool correctDecayChannel(std::string input, Long64_t cEvent,
-		std::map<std::string, TH1D*>* plots=NULL, int* hBB=NULL, int* hTauTau=NULL) {
-	/*Make sure event is hh->bbtautau, and point hbb and htautau to the Higgs*/
-	TChain *chain = new TChain("Delphes");
-	chain->Add(input.c_str());
-	ExRootTreeReader *treeReader = new ExRootTreeReader(chain);
-	TClonesArray *branchParticle = treeReader->UseBranch("Particle");
-	treeReader->ReadEntry(cEvent);
-	bool hBBFound = false, hTauTauFound = false;
-	int nHiggs = 0;
-	if (plots != NULL) (*plots)["cuts"]->Fill("hh->bb#tau#tau check", 1);
-	for (int p = 0; p < branchParticle->GetEntriesFast(); ++p) {
-		if (std::abs(((GenParticle*)branchParticle->At(p))->PID) == 25) { //Particle is Higgs
-			if (((GenParticle*)branchParticle->At(p))->D1 >= 0 && ((GenParticle*)branchParticle->At(p))->D2 >= 0) { //Daughters exists
-				if (((GenParticle*)branchParticle->At(((GenParticle*)branchParticle->At(p))->D1))->PID != 25 &&
-						((GenParticle*)branchParticle->At(((GenParticle*)branchParticle->At(p))->D2))->PID != 25) {
-					nHiggs++;
-					if (plots != NULL) (*plots)["higgsDecay"]->Fill(std::abs(((GenParticle*)branchParticle->At(((GenParticle*)branchParticle->At(p))->D1))->PID));
-					if (plots != NULL) (*plots)["higgsDecay"]->Fill(std::abs(((GenParticle*)branchParticle->At(((GenParticle*)branchParticle->At(p))->D2))->PID));
-					if (std::abs(((GenParticle*)branchParticle->At(((GenParticle*)branchParticle->At(p))->D1))->PID) == 5
-							&& std::abs(((GenParticle*)branchParticle->At(((GenParticle*)branchParticle->At(p))->D2))->PID) == 5) { //Daughters are b quarks
-						hBBFound = true;
-						if (hBB != NULL) *hBB = p; //Point to Higgs
-						if (hBBFound && hTauTauFound) { //h->bb and h->tautau found, so accept event
-							if (plots != NULL) (*plots)["cuts"]->Fill("hh->bb#tau#tau pass", 1);
-							chain->Delete();
-							delete treeReader;
-							return true;
-						}
-					}
-					if (std::abs(((GenParticle*)branchParticle->At(((GenParticle*)branchParticle->At(p))->D1))->PID) == 15
-							&& std::abs(((GenParticle*)branchParticle->At(((GenParticle*)branchParticle->At(p))->D2))->PID) == 15) { //Daughters are taus
-						hTauTauFound = true;
-						if (hTauTau != NULL) *hTauTau = p; //Point to Higgs
-						if (hBBFound && hTauTauFound) { //h->bb and h->tautau found, so accept event
-							if (plots != NULL) (*plots)["cuts"]->Fill("hh->bb#tau#tau pass", 1);
-							chain->Delete();
-							delete treeReader;
-							return true;
-						}
-					}
-				}
-			}
-			if (nHiggs >= 2) break; //Both Higgs found
-		}
-	}
-	chain->Delete();
-	delete treeReader;
-	return false; //Both h->bb and h->tautau not found
-}
-
 std::map<std::string, std::string> getOptions(int argc, char* argv[]) {
 	/*Interpret input arguments*/
 	std::map<std::string, std::string> options;
 	options.insert(std::make_pair("-i", "")); //Input mask
 	options.insert(std::make_pair("-o", "")); //Output name
-	options.insert(std::make_pair("-t", "0")); //MC truth cut
-	options.insert(std::make_pair("-s", "1")); //Event selection
+	options.insert(std::make_pair("-t", "0")); //Truth info
 	options.insert(std::make_pair("-d", "0")); //Debug mode
-	options.insert(std::make_pair("-m", "0")); //Output information for MVA selection
 	if (argc >= 2) {
 		std::string option(argv[1]);
 		if (option == "-h" || option == "--help") {
@@ -596,212 +473,34 @@ std::map<std::string, std::string> getOptions(int argc, char* argv[]) {
 	return options;
 }
 
-TMatrixD decomposeVector(TLorentzVector in) {
-	TMatrixD out(3, 3);
-	out(0, 0) = in.Px()*in.Px();
-	out(0, 1) = in.Px()*in.Py();
-	out(0, 2) = in.Px()*in.Pz();
-	out(1, 0) = in.Py()*in.Px();
-	out(1, 1) = in.Py()*in.Py();
-	out(1, 2) = in.Py()*in.Pz();
-	out(2, 0) = in.Pz()*in.Px();
-	out(2, 1) = in.Pz()*in.Py();
-	out(2, 2) = in.Pz()*in.Pz();
-	return out;
-}
-
-void appendSphericity(TMatrixD* mat, double* div, TLorentzVector mom) {
-	TMatrixD decomp = decomposeVector(mom);
-	*mat += decomp;
-	*div += pow(mom.P(), 2);
-}
-
-void appendSpherocity(TMatrixD* mat, double* div, TLorentzVector mom) {
-	TMatrixD decomp = decomposeVector(mom);
-	decomp *= 1/std::abs(mom.P());
-	*mat += decomp;
-	*div += std::abs(mom.P());
-}
-
-std::vector<double> getEigenValues(TMatrixD in) {
-	/*Return vector of sorted, nomalised eigenvalues of parssed matrix*/
-	TMatrixD eigenMatrix = TMatrixDEigen(in).GetEigenValues();
-	std::vector<double> eigenValues(3);
-	eigenValues[0] = eigenMatrix(0, 0);
-	eigenValues[1] = eigenMatrix(1, 1);
-	eigenValues[2] = eigenMatrix(2, 2);
-	std::sort(eigenValues.begin(), eigenValues.end(), std::greater<double>());
-	double sum = 0;
-	for (double n : eigenValues)
-		sum += n;
-	std::for_each(eigenValues.begin(), eigenValues.end(), [sum](double i) { return i/sum; });
-	return eigenValues;
-}
-
-void getEventShapes(std::vector<double> sphericityV, std::vector<double> spherocityV,
-		double* sphericity, double* spherocity,
-		double* aplanarity, double* aplanority,
-		double* upsilon, double* dShape) {
-	*sphericity = (3/2)*(sphericityV[1]+sphericityV[2]);
-	*spherocity = (3/2)*(spherocityV[1]+spherocityV[2]);
-	*aplanarity = 3*sphericityV[2]/2;
-	*aplanority = 3*spherocityV[2]/2;
-	*upsilon = sqrt(3.0)*(sphericityV[1]-sphericityV[2])/2;
-	*dShape = 27*spherocityV[0]*spherocityV[1]*spherocityV[2];
-}
-
-void getGlobalEventInfo(std::string input, Long64_t cEvent,
-		double*  hT, double*  sT, double* centrality, double* eVis,
-		int* nJets, int* nBJets, int* nTauJets,
-		double* minJetPT, double* meanJetPT, double* maxJetPT,
-		double* minJetMass, double* meanJetMass, double* maxJetMass,
-		double* minJetEta, double* meanJetEta, double* maxJetEta,
-		double* sphericity, double* spherocity,
-		double* aplanarity, double* aplanority,
-		double* upsilon, double* dShape) {
-	/*Fills referenced variables with global event information*/
-	if (debug) std::cout << "Getting global event info\n";
-	//Load event info____________________________
-	TChain *chain = new TChain("Delphes");
-	chain->Add(input.c_str());
-	ExRootTreeReader *treeReader = new ExRootTreeReader(chain);
-	TClonesArray *branchElectron = treeReader->UseBranch("Electron");
-	TClonesArray *branchMuon = treeReader->UseBranch("MuonLoose");
-	TClonesArray *branchJet = treeReader->UseBranch("Jet");
-	TClonesArray *branchMissingET = treeReader->UseBranch("MissingET");
-	treeReader->ReadEntry(cEvent);
-	if (debug) std::cout << "Loaded info\n";
-	//___________________________________________
-	//Reset variables____________________________
-	*hT = 0;
-	*sT = 0;
-	*centrality = 0;
-	*eVis = 0;
-	*nJets = 0;
-	*nBJets = 0;
-	*nTauJets = 0;
-	*minJetPT = -1;
-	*meanJetPT = 0;
-	*maxJetPT = -1;
-	*minJetMass = -1;
-	*meanJetMass = 0;
-	*maxJetMass = -1;
-	*minJetEta = -1;
-	*meanJetEta = 0;
-	*maxJetEta = -1;
-	*sphericity = 0;
-	*spherocity = 0;
-	*aplanarity = 0;
-	*aplanority = 0;
-	*upsilon = 0;
-	*dShape = 0;
-	//___________________________________________
-	//Initialise holders_________________________
-	Electron* electron;
-	Muon* muon;
-	Jet* jet;
-	MissingET* mPT;
-	TMatrixD sphericityT(3, 3), spherocityT(3, 3);
-	double sphericityD = 0, spherocityD = 0;
-	//___________________________________________
-	//Loop through objects_____________________
-	for (int i = 0; i < branchElectron->GetEntriesFast(); ++i) { //Loop over all electrons in event
-		electron = (Electron*)branchElectron->At(i);
-		*sT += electron->PT;
-		*eVis += electron->P4().E();
-		*centrality += electron->PT;
-		appendSphericity(&sphericityT, &sphericityD, electron->P4());
-		appendSpherocity(&spherocityT, &spherocityD, electron->P4());
+bool getGenHiggs(TClonesArray *branchParticle,
+		std::map<std::string, TH1D*>* plots=NULL, int* hTauTau=NULL) {
+	/*Point and htautau to the Higgs*/
+	if (plots != NULL) (*plots)["cuts"]->Fill("h->#tau#tau check", 1);
+	for (int p = 0; p < branchParticle->GetEntriesFast(); ++p) {
+		if (std::abs(((GenParticle*)branchParticle->At(p))->PID) == 25) { //Particle is Higgs
+			if (((GenParticle*)branchParticle->At(p))->D1 >= 0 && ((GenParticle*)branchParticle->At(p))->D2 >= 0) { //Daughters exists
+				if (((GenParticle*)branchParticle->At(((GenParticle*)branchParticle->At(p))->D1))->PID != 25 &&
+						((GenParticle*)branchParticle->At(((GenParticle*)branchParticle->At(p))->D2))->PID != 25) {
+					if (plots != NULL) (*plots)["higgsDecay"]->Fill(std::abs(((GenParticle*)branchParticle->At(((GenParticle*)branchParticle->At(p))->D1))->PID));
+					if (plots != NULL) (*plots)["higgsDecay"]->Fill(std::abs(((GenParticle*)branchParticle->At(((GenParticle*)branchParticle->At(p))->D2))->PID));
+					if (std::abs(((GenParticle*)branchParticle->At(((GenParticle*)branchParticle->At(p))->D1))->PID) == 15
+							&& std::abs(((GenParticle*)branchParticle->At(((GenParticle*)branchParticle->At(p))->D2))->PID) == 15) { //Daughters are taus
+						if (hTauTau != NULL) *hTauTau = p; //Point to Higgs
+						if (plots != NULL) (*plots)["cuts"]->Fill("hh->tau#tau pass", 1);
+						return true;
+					}
+				}
+			}
+		}
 	}
-	for (int i = 0; i < branchMuon->GetEntriesFast(); ++i) { //Loop over all muons in event
-		muon = (Muon*)branchMuon->At(i);
-		*sT += muon->PT;
-		*eVis += muon->P4().E();
-		*centrality += muon->PT;
-		appendSphericity(&sphericityT, &sphericityD, muon->P4());
-		appendSpherocity(&spherocityT, &spherocityD, muon->P4());
-	}
-	mPT = (MissingET*)branchMissingET->At(0);
-	*sT += mPT->MET;
-	for (int i = 0; i < branchJet->GetEntriesFast(); ++i) { //Loop over all jets in event
-		jet = (Jet*)branchJet->At(i);
-		*hT += sqrt(pow(jet->Mass, 2)+pow(jet->PT, 2));
-		*sT += sqrt(pow(jet->Mass, 2)+pow(jet->PT, 2));
-		*centrality += jet->PT;
-		*eVis += jet->P4().E();
-		*nJets += 1;
-		if (jet->TauTag) *nTauJets += 1;
-		if (jet->BTag) *nBJets += 1;
-		if (*minJetPT == -1 | jet->PT < *minJetPT) *minJetPT = jet->PT;
-		*meanJetPT += jet->PT;
-		if (jet->PT > *maxJetPT) *maxJetPT = jet->PT;
-		if (*minJetMass == -1 | jet->Mass < *minJetMass) *minJetMass = jet->Mass;
-		*meanJetMass += jet->Mass;
-		if (jet->Mass > *maxJetMass) *maxJetMass = jet->Mass;
-		if (*minJetEta == -1 | std::abs(jet->Eta) < *minJetEta) *minJetEta = std::abs(jet->Eta);
-		*meanJetEta += jet->Eta;
-		if (std::abs(jet->Eta) > *maxJetEta) *maxJetEta = std::abs(jet->Eta);
-		appendSphericity(&sphericityT, &sphericityD, jet->P4());
-		appendSpherocity(&spherocityT, &spherocityD, jet->P4());
-	}
-	//___________________________________________
-	//Finalise variabales________________________
-	*centrality /= *eVis;
-	*meanJetPT /= *nJets;
-	*meanJetMass /= *nJets;
-	*meanJetEta /= *nJets;
-	sphericityT *= 1/sphericityD;
-	spherocityT *= 1/spherocityD;
-	//___________________________________________
-	//Calculate event shapes_____________________
-	if (debug) std::cout << "Calculating global event shapes\n";
-	std::vector<double> sphericityV = getEigenValues(sphericityT);
-	std::vector<double> spherocityV = getEigenValues(spherocityT);
-	getEventShapes(sphericityV, spherocityV,
-			sphericity, spherocity,
-			aplanarity, aplanority,
-			upsilon, dShape);
-	//___________________________________________
-	chain->Delete();
-	delete treeReader;
+	return false; //h->tautau not found
 }
 
-void getPrimaryEventShapes(TLorentzVector v_tau_0, TLorentzVector v_tau_1, TLorentzVector v_bJet_0, TLorentzVector v_bJet_1,
-		double* sphericity, double* spherocity,
-		double* aplanarity, double* aplanority,
-		double* upsilon, double* dShape) {
-	/*Sets values of referenced event-shape variables for final-states*/
-	if (debug) std::cout << "Getting primary event shapes\n";
-	TMatrixD sphericityT(3, 3), spherocityT(3, 3);
-	double sphericityD = 0, spherocityD = 0;
-	//Populate tensors___________________________
-	appendSphericity(&sphericityT, &sphericityD, v_tau_0);
-	appendSpherocity(&spherocityT, &spherocityD, v_tau_0);
-	appendSphericity(&sphericityT, &sphericityD, v_tau_1);
-	appendSpherocity(&spherocityT, &spherocityD, v_tau_1);
-	appendSphericity(&sphericityT, &sphericityD, v_bJet_0);
-	appendSpherocity(&spherocityT, &spherocityD, v_bJet_0);
-	appendSphericity(&sphericityT, &sphericityD, v_bJet_1);
-	appendSpherocity(&spherocityT, &spherocityD, v_bJet_1);
-	sphericityT *= 1/sphericityD;
-	spherocityT *= 1/spherocityD;
-	//___________________________________________
-	//Calculate event shapes_____________________
-	if (debug) std::cout << "Calculating primary event shapes\n";
-	std::vector<double> sphericityV = getEigenValues(sphericityT);
-	std::vector<double> spherocityV = getEigenValues(spherocityT);
-	getEventShapes(sphericityV, spherocityV,
-			sphericity, spherocity,
-			aplanarity, aplanority,
-			upsilon, dShape);
-	//___________________________________________
-}
-
-bool truthCut(std::string input, Long64_t cEvent, int b_0, int b_1, int l_0, int l_1, int hBB, int hTauTau,
+bool truthCut(std::string input, Long64_t cEvent, int l_0, int l_1,
 		std::string mode, std::map<std::string, TH1D*>* plots,
-		TLorentzVector* v_gen_higgs_bb, TLorentzVector* v_gen_higgs_tt,
-		TLorentzVector* v_gen_tau_0, TLorentzVector* v_gen_tau_1,
-		TLorentzVector* v_gen_bJet_0, TLorentzVector* v_gen_bJet_1) {
+		TLorentzVector* v_gen_higgs_tt,
+		TLorentzVector* v_gen_tau_0, TLorentzVector* v_gen_tau_1) {
 	/*Checks whether selected final states are correct*/
 	double jetRadius = 0.5;
 	TChain *chain = new TChain("Delphes");
@@ -815,27 +514,9 @@ bool truthCut(std::string input, Long64_t cEvent, int b_0, int b_1, int l_0, int
 	if (debug) std::cout << "Loading data for MC truth cut on event mode " << mode << "\n";
 	//Check if selected final states are correct_
 	(*plots)["cuts"]->Fill("MC-truth check", 1);
+	int hTauTau,
+	if (!getGenHiggs(branchParticle, plots, &hTauTau)) return false
 	int swap;
-	//Check b jets_______________________________
-	GenParticle *bJet_0, *bJet_1;
-	GenParticle* higgs = (GenParticle*)branchParticle->At(hBB);
-	(*plots)["cuts"]->Fill("b-jets check", 1);
-	if (debug) std::cout << "Checking b-jets\n";
-	if (!checkDiJet(branchJet, branchParticle, b_0, b_1, hBB, 5, &swap, (*plots)["bMatch"], jetRadius)) {
-		if (debug) std::cout << "MC check fails due to di-Jet on b-jets check\n";
-		chain->Delete();
-		return false; //b-jet selection incorrect
-	}
-	if (debug) std::cout << "Both b jets confirmed\n";
-	(*plots)["cuts"]->Fill("b-jets pass", 1);
-	if (swap) {
-		bJet_0 = (GenParticle*)branchParticle->At(moveToEnd(higgs->D2, branchParticle));
-		bJet_1 = (GenParticle*)branchParticle->At(moveToEnd(higgs->D1, branchParticle));
-	} else {
-		bJet_0 = (GenParticle*)branchParticle->At(moveToEnd(higgs->D1, branchParticle));
-		bJet_1 = (GenParticle*)branchParticle->At(moveToEnd(higgs->D2, branchParticle));
-	}
-	//___________________________________________
 	//Check taus_________________________________
 	if (debug) std::cout << "Checking taus\n";
 	std::vector<std::string> options;
@@ -955,12 +636,9 @@ bool truthCut(std::string input, Long64_t cEvent, int b_0, int b_1, int l_0, int
 	(*plots)["cuts"]->Fill("#taus pass", 1);
 	(*plots)["cuts"]->Fill("MC-truth pass", 1);
 	//Get vectors for regression_________________
-	*v_gen_higgs_bb = ((GenParticle*)branchParticle->At(hBB))->P4();
 	*v_gen_higgs_tt = ((GenParticle*)branchParticle->At(hTauTau))->P4();
 	*v_gen_tau_0 = tau_0->P4();
 	*v_gen_tau_1 = tau_1->P4();
-	*v_gen_bJet_0 = bJet_0->P4();
-	*v_gen_bJet_1 = bJet_1->P4();
 	//___________________________________________
 	chain->Delete();
 	delete treeReader;
@@ -983,581 +661,209 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	//___________________________________________
 	//Initialise variables_______________________
 	std::cout << "Initialising variables\n";
-	int lepton_0, lepton_1, tau_0, tau_1, bJet_0, bJet_1;
+	int lepton_0, lepton_1, tau_0, tau_1;
 	//Low-level variables________________________
-	double t_0_pT, t_0_eta, t_0_phi, t_0_mass; //Tau 0 variables
-	double t_1_pT, t_1_eta, t_1_phi, t_1_mass; //Tau 1 variables
-	double b_0_pT, b_0_eta, b_0_phi, b_0_mass; //b-jet 0 variables
-	double b_1_pT, b_1_eta, b_1_phi, b_1_mass; //b-jet 1 variables
+	double t_0_pT, t_0_eta, t_0_phi, t_0_mass, t_0_mT; //Tau 0 variables
+	double t_1_pT, t_1_eta, t_1_phi, t_1_mass, t_1_mT; //Tau 1 variables
 	double mPT_pT, mPT_phi; //Missing ET variables
 	//___________________________________________
 	//Reconstructed variables____________________
 	double h_tt_pT, h_tt_eta, h_tt_phi, h_tt_mass; //Higgs 0 variables
-	double h_bb_pT, h_bb_eta, h_bb_phi, h_bb_mass; //Higgs 1 variables
-	double diH_pT, diH_eta, diH_phi, diH_mass; //di-Higgs variables
-	//___________________________________________
-	//Global event variables_____________________
-	double hT, sT, centrality, eVis; //Global kinematics
-	int nJets, nBJets, nTauJets; //Jet multiplicities
-	double minJetPT, meanJetPT, maxJetPT; //Global jet pTs
-	double minJetMass, meanJetMass, maxJetMass; //Global jet masses
-	double minJetEta, meanJetEta, maxJetEta; //Global jet etas
-	double sphericityA, spherocityA, aplanarityA, aplanorityA, upsilonA, dShapeA; //Event shapes for all objects
-	double sphericityP, spherocityP, aplanarityP, aplanorityP, upsilonP, dShapeP; //Event shapes for primary objects
 	//___________________________________________
 	//Generator-level variables for regression and cuts
 	double gen_t_0_pT, gen_t_0_eta, gen_t_0_phi, gen_t_0_E; //Tau 0 variables
 	double gen_t_1_pT, gen_t_1_eta, gen_t_1_phi, gen_t_1_E; //Tau 1 variables
-	double gen_b_0_pT, gen_b_0_eta, gen_b_0_phi, gen_b_0_E; //b-jet 0 variables
-	double gen_b_1_pT, gen_b_1_eta, gen_b_1_phi, gen_b_1_E; //b-jet 1 variables
-	double gen_diH_pT, gen_diH_eta, gen_diH_phi, gen_diH_E, gen_diH_mass; //diHiggs variables
-	double gen_h_bb_pT, gen_h_bb_eta, gen_h_bb_phi, gen_h_bb_E; //Higgs->bb variables
 	double gen_h_tt_pT, gen_h_tt_eta, gen_h_tt_phi, gen_h_tt_E; //Higgs->tau tau variables
 	bool gen_mctMatch; //MC truth match
 	//___________________________________________
 	double weight; //Event weight
-	int nElectrons = 0, nMuons = 0;
 	bool eventAccepted = false;
-	TTree* e_tau_b_b = new TTree("e_tau_b_b", "e #tau b #bar{b}");
-	e_tau_b_b->Branch("t_0_pT", &t_0_pT);
-	e_tau_b_b->Branch("t_0_eta", &t_0_eta);
-	e_tau_b_b->Branch("t_0_phi", &t_0_phi);
-	e_tau_b_b->Branch("t_0_mass", &t_0_mass);
-	e_tau_b_b->Branch("t_1_pT", &t_1_pT);
-	e_tau_b_b->Branch("t_1_eta", &t_1_eta);
-	e_tau_b_b->Branch("t_1_phi", &t_1_phi);
-	e_tau_b_b->Branch("t_1_mass", &t_1_mass);
-	e_tau_b_b->Branch("b_0_pT", &b_0_pT);
-	e_tau_b_b->Branch("b_0_eta", &b_0_eta);
-	e_tau_b_b->Branch("b_0_phi", &b_0_phi);
-	e_tau_b_b->Branch("b_0_mass", &b_0_mass);
-	e_tau_b_b->Branch("b_1_pT", &b_1_pT);
-	e_tau_b_b->Branch("b_1_eta", &b_1_eta);
-	e_tau_b_b->Branch("b_1_phi", &b_1_phi);
-	e_tau_b_b->Branch("b_1_mass", &b_1_mass);
-	e_tau_b_b->Branch("mPT_pT", &mPT_pT);
-	e_tau_b_b->Branch("mPT_phi", &mPT_phi);
-	e_tau_b_b->Branch("h_tt_pT", &h_tt_pT);
-	e_tau_b_b->Branch("h_tt_eta", &h_tt_eta);
-	e_tau_b_b->Branch("h_tt_phi", &h_tt_phi);
-	e_tau_b_b->Branch("h_tt_mass", &h_tt_mass);
-	e_tau_b_b->Branch("h_bb_pT", &h_bb_pT);
-	e_tau_b_b->Branch("h_bb_eta", &h_bb_eta);
-	e_tau_b_b->Branch("h_bb_phi", &h_bb_phi);
-	e_tau_b_b->Branch("h_bb_mass", &h_bb_mass);
-	e_tau_b_b->Branch("diH_pT", &diH_pT);
-	e_tau_b_b->Branch("diH_eta", &diH_eta);
-	e_tau_b_b->Branch("diH_phi", &diH_phi);
-	e_tau_b_b->Branch("diH_mass", &diH_mass);
-	e_tau_b_b->Branch("hT", &hT);
-	e_tau_b_b->Branch("sT", &sT);
-	e_tau_b_b->Branch("centrality", &centrality);
-	e_tau_b_b->Branch("eVis", &eVis);
-	e_tau_b_b->Branch("nJets", &nJets);
-	e_tau_b_b->Branch("nBJets", &nBJets);
-	e_tau_b_b->Branch("nTauJets", &nTauJets);
-	e_tau_b_b->Branch("minJetPT", &minJetPT);
-	e_tau_b_b->Branch("meanJetPT", &meanJetPT);
-	e_tau_b_b->Branch("maxJetPT", &maxJetPT);
-	e_tau_b_b->Branch("minJetMass", &minJetMass);
-	e_tau_b_b->Branch("meanJetMass", &meanJetMass);
-	e_tau_b_b->Branch("maxJetMass", &maxJetMass);
-	e_tau_b_b->Branch("minJetEta", &minJetEta);
-	e_tau_b_b->Branch("meanJetEta", &meanJetEta);
-	e_tau_b_b->Branch("maxJetEta", &maxJetEta);
-	e_tau_b_b->Branch("sphericityA", &sphericityA);
-	e_tau_b_b->Branch("spherocityA", &spherocityA);
-	e_tau_b_b->Branch("aplanarityA", &aplanarityA);
-	e_tau_b_b->Branch("aplanorityA", &aplanorityA);
-	e_tau_b_b->Branch("upsilonA", &upsilonA);
-	e_tau_b_b->Branch("dShapeA", &dShapeA);
-	e_tau_b_b->Branch("sphericityP", &sphericityP);
-	e_tau_b_b->Branch("spherocityP", &spherocityP);
-	e_tau_b_b->Branch("aplanarityP", &aplanarityP);
-	e_tau_b_b->Branch("aplanorityP", &aplanorityP);
-	e_tau_b_b->Branch("upsilonP", &upsilonP);
-	e_tau_b_b->Branch("dShapeP", &dShapeP);
-	e_tau_b_b->Branch("gen_t_0_pT", &gen_t_0_pT);
-	e_tau_b_b->Branch("gen_t_0_eta", &gen_t_0_eta);
-	e_tau_b_b->Branch("gen_t_0_phi", &gen_t_0_phi);
-	e_tau_b_b->Branch("gen_t_0_E", &gen_t_0_E);
-	e_tau_b_b->Branch("gen_t_1_pT", &gen_t_1_pT);
-	e_tau_b_b->Branch("gen_t_1_eta", &gen_t_1_eta);
-	e_tau_b_b->Branch("gen_t_1_phi", &gen_t_1_phi);
-	e_tau_b_b->Branch("gen_t_1_E", &gen_t_1_E);
-	e_tau_b_b->Branch("gen_b_0_pT", &gen_b_0_pT);
-	e_tau_b_b->Branch("gen_b_0_eta", &gen_b_0_eta);
-	e_tau_b_b->Branch("gen_b_0_phi", &gen_b_0_phi);
-	e_tau_b_b->Branch("gen_b_0_E", &gen_b_0_E);
-	e_tau_b_b->Branch("gen_b_1_pT", &gen_b_1_pT);
-	e_tau_b_b->Branch("gen_b_1_eta", &gen_b_1_eta);
-	e_tau_b_b->Branch("gen_b_1_phi", &gen_b_1_phi);
-	e_tau_b_b->Branch("gen_b_1_E", &gen_b_1_E);
-	e_tau_b_b->Branch("gen_diH_pT", &gen_diH_pT);
-	e_tau_b_b->Branch("gen_diH_eta", &gen_diH_eta);
-	e_tau_b_b->Branch("gen_diH_phi", &gen_diH_phi);
-	e_tau_b_b->Branch("gen_diH_E", &gen_diH_E);
-	e_tau_b_b->Branch("gen_diH_mass", &gen_diH_mass);
-	e_tau_b_b->Branch("gen_h_bb_pT", &gen_h_bb_pT);
-	e_tau_b_b->Branch("gen_h_bb_eta", &gen_h_bb_eta);
-	e_tau_b_b->Branch("gen_h_bb_phi", &gen_h_bb_phi);
-	e_tau_b_b->Branch("gen_h_bb_E", &gen_h_bb_E);
-	e_tau_b_b->Branch("gen_h_tt_pT", &gen_h_tt_pT);
-	e_tau_b_b->Branch("gen_h_tt_eta", &gen_h_tt_eta);
-	e_tau_b_b->Branch("gen_h_tt_phi", &gen_h_tt_phi);
-	e_tau_b_b->Branch("gen_h_tt_E", &gen_h_tt_E);
-	e_tau_b_b->Branch("gen_mctMatch", &gen_mctMatch);
-	e_tau_b_b->Branch("gen_weight", &weight);
-	TTree* mu_tau_b_b = new TTree("mu_tau_b_b", "#mu #tau_{h} b #bar{b}");
-	mu_tau_b_b->Branch("t_0_pT", &t_0_pT);
-	mu_tau_b_b->Branch("t_0_eta", &t_0_eta);
-	mu_tau_b_b->Branch("t_0_phi", &t_0_phi);
-	mu_tau_b_b->Branch("t_0_mass", &t_0_mass);
-	mu_tau_b_b->Branch("t_1_pT", &t_1_pT);
-	mu_tau_b_b->Branch("t_1_eta", &t_1_eta);
-	mu_tau_b_b->Branch("t_1_phi", &t_1_phi);
-	mu_tau_b_b->Branch("t_1_mass", &t_1_mass);
-	mu_tau_b_b->Branch("b_0_pT", &b_0_pT);
-	mu_tau_b_b->Branch("b_0_eta", &b_0_eta);
-	mu_tau_b_b->Branch("b_0_phi", &b_0_phi);
-	mu_tau_b_b->Branch("b_0_mass", &b_0_mass);
-	mu_tau_b_b->Branch("b_1_pT", &b_1_pT);
-	mu_tau_b_b->Branch("b_1_eta", &b_1_eta);
-	mu_tau_b_b->Branch("b_1_phi", &b_1_phi);
-	mu_tau_b_b->Branch("b_1_mass", &b_1_mass);
-	mu_tau_b_b->Branch("mPT_pT", &mPT_pT);
-	mu_tau_b_b->Branch("mPT_phi", &mPT_phi);
-	mu_tau_b_b->Branch("h_tt_pT", &h_tt_pT);
-	mu_tau_b_b->Branch("h_tt_eta", &h_tt_eta);
-	mu_tau_b_b->Branch("h_tt_phi", &h_tt_phi);
-	mu_tau_b_b->Branch("h_tt_mass", &h_tt_mass);
-	mu_tau_b_b->Branch("h_bb_pT", &h_bb_pT);
-	mu_tau_b_b->Branch("h_bb_eta", &h_bb_eta);
-	mu_tau_b_b->Branch("h_bb_phi", &h_bb_phi);
-	mu_tau_b_b->Branch("h_bb_mass", &h_bb_mass);
-	mu_tau_b_b->Branch("diH_pT", &diH_pT);
-	mu_tau_b_b->Branch("diH_eta", &diH_eta);
-	mu_tau_b_b->Branch("diH_phi", &diH_phi);
-	mu_tau_b_b->Branch("diH_mass", &diH_mass);
-	mu_tau_b_b->Branch("hT", &hT);
-	mu_tau_b_b->Branch("sT", &sT);
-	mu_tau_b_b->Branch("centrality", &centrality);
-	mu_tau_b_b->Branch("eVis", &eVis);
-	mu_tau_b_b->Branch("nJets", &nJets);
-	mu_tau_b_b->Branch("nBJets", &nBJets);
-	mu_tau_b_b->Branch("nTauJets", &nTauJets);
-	mu_tau_b_b->Branch("minJetPT", &minJetPT);
-	mu_tau_b_b->Branch("meanJetPT", &meanJetPT);
-	mu_tau_b_b->Branch("maxJetPT", &maxJetPT);
-	mu_tau_b_b->Branch("minJetMass", &minJetMass);
-	mu_tau_b_b->Branch("meanJetMass", &meanJetMass);
-	mu_tau_b_b->Branch("maxJetMass", &maxJetMass);
-	mu_tau_b_b->Branch("minJetEta", &minJetEta);
-	mu_tau_b_b->Branch("meanJetEta", &meanJetEta);
-	mu_tau_b_b->Branch("maxJetEta", &maxJetEta);
-	mu_tau_b_b->Branch("sphericityA", &sphericityA);
-	mu_tau_b_b->Branch("spherocityA", &spherocityA);
-	mu_tau_b_b->Branch("aplanarityA", &aplanarityA);
-	mu_tau_b_b->Branch("aplanorityA", &aplanorityA);
-	mu_tau_b_b->Branch("upsilonA", &upsilonA);
-	mu_tau_b_b->Branch("dShapeA", &dShapeA);
-	mu_tau_b_b->Branch("sphericityP", &sphericityP);
-	mu_tau_b_b->Branch("spherocityP", &spherocityP);
-	mu_tau_b_b->Branch("aplanarityP", &aplanarityP);
-	mu_tau_b_b->Branch("aplanorityP", &aplanorityP);
-	mu_tau_b_b->Branch("upsilonP", &upsilonP);
-	mu_tau_b_b->Branch("dShapeP", &dShapeP);
-	mu_tau_b_b->Branch("gen_t_0_pT", &gen_t_0_pT);
-	mu_tau_b_b->Branch("gen_t_0_eta", &gen_t_0_eta);
-	mu_tau_b_b->Branch("gen_t_0_phi", &gen_t_0_phi);
-	mu_tau_b_b->Branch("gen_t_0_E", &gen_t_0_E);
-	mu_tau_b_b->Branch("gen_t_1_pT", &gen_t_1_pT);
-	mu_tau_b_b->Branch("gen_t_1_eta", &gen_t_1_eta);
-	mu_tau_b_b->Branch("gen_t_1_phi", &gen_t_1_phi);
-	mu_tau_b_b->Branch("gen_t_1_E", &gen_t_1_E);
-	mu_tau_b_b->Branch("gen_b_0_pT", &gen_b_0_pT);
-	mu_tau_b_b->Branch("gen_b_0_eta", &gen_b_0_eta);
-	mu_tau_b_b->Branch("gen_b_0_phi", &gen_b_0_phi);
-	mu_tau_b_b->Branch("gen_b_0_E", &gen_b_0_E);
-	mu_tau_b_b->Branch("gen_b_1_pT", &gen_b_1_pT);
-	mu_tau_b_b->Branch("gen_b_1_eta", &gen_b_1_eta);
-	mu_tau_b_b->Branch("gen_b_1_phi", &gen_b_1_phi);
-	mu_tau_b_b->Branch("gen_b_1_E", &gen_b_1_E);
-	mu_tau_b_b->Branch("gen_diH_pT", &gen_diH_pT);
-	mu_tau_b_b->Branch("gen_diH_eta", &gen_diH_eta);
-	mu_tau_b_b->Branch("gen_diH_phi", &gen_diH_phi);
-	mu_tau_b_b->Branch("gen_diH_E", &gen_diH_E);
-	mu_tau_b_b->Branch("gen_diH_mass", &gen_diH_mass);
-	mu_tau_b_b->Branch("gen_h_bb_pT", &gen_h_bb_pT);
-	mu_tau_b_b->Branch("gen_h_bb_eta", &gen_h_bb_eta);
-	mu_tau_b_b->Branch("gen_h_bb_phi", &gen_h_bb_phi);
-	mu_tau_b_b->Branch("gen_h_bb_E", &gen_h_bb_E);
-	mu_tau_b_b->Branch("gen_h_tt_pT", &gen_h_tt_pT);
-	mu_tau_b_b->Branch("gen_h_tt_eta", &gen_h_tt_eta);
-	mu_tau_b_b->Branch("gen_h_tt_phi", &gen_h_tt_phi);
-	mu_tau_b_b->Branch("gen_h_tt_E", &gen_h_tt_E);
-	mu_tau_b_b->Branch("gen_mctMatch", &gen_mctMatch);
-	mu_tau_b_b->Branch("gen_weight", &weight);
-	TTree* tau_tau_b_b = new TTree("tau_tau_b_b", "#tau_{h} #tau_{h} b #bar{b}");
-	tau_tau_b_b->Branch("t_0_pT", &t_0_pT);
-	tau_tau_b_b->Branch("t_0_eta", &t_0_eta);
-	tau_tau_b_b->Branch("t_0_phi", &t_0_phi);
-	tau_tau_b_b->Branch("t_0_mass", &t_0_mass);
-	tau_tau_b_b->Branch("t_1_pT", &t_1_pT);
-	tau_tau_b_b->Branch("t_1_eta", &t_1_eta);
-	tau_tau_b_b->Branch("t_1_phi", &t_1_phi);
-	tau_tau_b_b->Branch("t_1_mass", &t_1_mass);
-	tau_tau_b_b->Branch("b_0_pT", &b_0_pT);
-	tau_tau_b_b->Branch("b_0_eta", &b_0_eta);
-	tau_tau_b_b->Branch("b_0_phi", &b_0_phi);
-	tau_tau_b_b->Branch("b_0_mass", &b_0_mass);
-	tau_tau_b_b->Branch("b_1_pT", &b_1_pT);
-	tau_tau_b_b->Branch("b_1_eta", &b_1_eta);
-	tau_tau_b_b->Branch("b_1_phi", &b_1_phi);
-	tau_tau_b_b->Branch("b_1_mass", &b_1_mass);
-	tau_tau_b_b->Branch("mPT_pT", &mPT_pT);
-	tau_tau_b_b->Branch("mPT_phi", &mPT_phi);
-	tau_tau_b_b->Branch("h_tt_pT", &h_tt_pT);
-	tau_tau_b_b->Branch("h_tt_eta", &h_tt_eta);
-	tau_tau_b_b->Branch("h_tt_phi", &h_tt_phi);
-	tau_tau_b_b->Branch("h_tt_mass", &h_tt_mass);
-	tau_tau_b_b->Branch("h_bb_pT", &h_bb_pT);
-	tau_tau_b_b->Branch("h_bb_eta", &h_bb_eta);
-	tau_tau_b_b->Branch("h_bb_phi", &h_bb_phi);
-	tau_tau_b_b->Branch("h_bb_mass", &h_bb_mass);
-	tau_tau_b_b->Branch("diH_pT", &diH_pT);
-	tau_tau_b_b->Branch("diH_eta", &diH_eta);
-	tau_tau_b_b->Branch("diH_phi", &diH_phi);
-	tau_tau_b_b->Branch("diH_mass", &diH_mass);
-	tau_tau_b_b->Branch("hT", &hT);
-	tau_tau_b_b->Branch("sT", &sT);
-	tau_tau_b_b->Branch("centrality", &centrality);
-	tau_tau_b_b->Branch("eVis", &eVis);
-	tau_tau_b_b->Branch("nJets", &nJets);
-	tau_tau_b_b->Branch("nBJets", &nBJets);
-	tau_tau_b_b->Branch("nTauJets", &nTauJets);
-	tau_tau_b_b->Branch("minJetPT", &minJetPT);
-	tau_tau_b_b->Branch("meanJetPT", &meanJetPT);
-	tau_tau_b_b->Branch("maxJetPT", &maxJetPT);
-	tau_tau_b_b->Branch("minJetMass", &minJetMass);
-	tau_tau_b_b->Branch("meanJetMass", &meanJetMass);
-	tau_tau_b_b->Branch("maxJetMass", &maxJetMass);
-	tau_tau_b_b->Branch("minJetEta", &minJetEta);
-	tau_tau_b_b->Branch("meanJetEta", &meanJetEta);
-	tau_tau_b_b->Branch("maxJetEta", &maxJetEta);
-	tau_tau_b_b->Branch("sphericityA", &sphericityA);
-	tau_tau_b_b->Branch("spherocityA", &spherocityA);
-	tau_tau_b_b->Branch("aplanarityA", &aplanarityA);
-	tau_tau_b_b->Branch("aplanorityA", &aplanorityA);
-	tau_tau_b_b->Branch("upsilonA", &upsilonA);
-	tau_tau_b_b->Branch("dShapeA", &dShapeA);
-	tau_tau_b_b->Branch("sphericityP", &sphericityP);
-	tau_tau_b_b->Branch("spherocityP", &spherocityP);
-	tau_tau_b_b->Branch("aplanarityP", &aplanarityP);
-	tau_tau_b_b->Branch("aplanorityP", &aplanorityP);
-	tau_tau_b_b->Branch("upsilonP", &upsilonP);
-	tau_tau_b_b->Branch("dShapeP", &dShapeP);
-	tau_tau_b_b->Branch("gen_t_0_pT", &gen_t_0_pT);
-	tau_tau_b_b->Branch("gen_t_0_eta", &gen_t_0_eta);
-	tau_tau_b_b->Branch("gen_t_0_phi", &gen_t_0_phi);
-	tau_tau_b_b->Branch("gen_t_0_E", &gen_t_0_E);
-	tau_tau_b_b->Branch("gen_t_1_pT", &gen_t_1_pT);
-	tau_tau_b_b->Branch("gen_t_1_eta", &gen_t_1_eta);
-	tau_tau_b_b->Branch("gen_t_1_phi", &gen_t_1_phi);
-	tau_tau_b_b->Branch("gen_t_1_E", &gen_t_1_E);
-	tau_tau_b_b->Branch("gen_b_0_pT", &gen_b_0_pT);
-	tau_tau_b_b->Branch("gen_b_0_eta", &gen_b_0_eta);
-	tau_tau_b_b->Branch("gen_b_0_phi", &gen_b_0_phi);
-	tau_tau_b_b->Branch("gen_b_0_E", &gen_b_0_E);
-	tau_tau_b_b->Branch("gen_b_1_pT", &gen_b_1_pT);
-	tau_tau_b_b->Branch("gen_b_1_eta", &gen_b_1_eta);
-	tau_tau_b_b->Branch("gen_b_1_phi", &gen_b_1_phi);
-	tau_tau_b_b->Branch("gen_b_1_E", &gen_b_1_E);
-	tau_tau_b_b->Branch("gen_diH_pT", &gen_diH_pT);
-	tau_tau_b_b->Branch("gen_diH_eta", &gen_diH_eta);
-	tau_tau_b_b->Branch("gen_diH_phi", &gen_diH_phi);
-	tau_tau_b_b->Branch("gen_diH_E", &gen_diH_E);
-	tau_tau_b_b->Branch("gen_diH_mass", &gen_diH_mass);
-	tau_tau_b_b->Branch("gen_h_bb_pT", &gen_h_bb_pT);
-	tau_tau_b_b->Branch("gen_h_bb_eta", &gen_h_bb_eta);
-	tau_tau_b_b->Branch("gen_h_bb_phi", &gen_h_bb_phi);
-	tau_tau_b_b->Branch("gen_h_bb_E", &gen_h_bb_E);
-	tau_tau_b_b->Branch("gen_h_tt_pT", &gen_h_tt_pT);
-	tau_tau_b_b->Branch("gen_h_tt_eta", &gen_h_tt_eta);
-	tau_tau_b_b->Branch("gen_h_tt_phi", &gen_h_tt_phi);
-	tau_tau_b_b->Branch("gen_h_tt_E", &gen_h_tt_E);
-	tau_tau_b_b->Branch("gen_mctMatch", &gen_mctMatch);
-	tau_tau_b_b->Branch("gen_weight", &weight);
-	TTree* e_e_b_b = new TTree("e_e_b_b", "e e b #bar{b}");
-	e_e_b_b->Branch("t_0_pT", &t_0_pT);
-	e_e_b_b->Branch("t_0_eta", &t_0_eta);
-	e_e_b_b->Branch("t_0_phi", &t_0_phi);
-	e_e_b_b->Branch("t_0_mass", &t_0_mass);
-	e_e_b_b->Branch("t_1_pT", &t_1_pT);
-	e_e_b_b->Branch("t_1_eta", &t_1_eta);
-	e_e_b_b->Branch("t_1_phi", &t_1_phi);
-	e_e_b_b->Branch("t_1_mass", &t_1_mass);
-	e_e_b_b->Branch("b_0_pT", &b_0_pT);
-	e_e_b_b->Branch("b_0_eta", &b_0_eta);
-	e_e_b_b->Branch("b_0_phi", &b_0_phi);
-	e_e_b_b->Branch("b_0_mass", &b_0_mass);
-	e_e_b_b->Branch("b_1_pT", &b_1_pT);
-	e_e_b_b->Branch("b_1_eta", &b_1_eta);
-	e_e_b_b->Branch("b_1_phi", &b_1_phi);
-	e_e_b_b->Branch("b_1_mass", &b_1_mass);
-	e_e_b_b->Branch("mPT_pT", &mPT_pT);
-	e_e_b_b->Branch("mPT_phi", &mPT_phi);
-	e_e_b_b->Branch("h_tt_pT", &h_tt_pT);
-	e_e_b_b->Branch("h_tt_eta", &h_tt_eta);
-	e_e_b_b->Branch("h_tt_phi", &h_tt_phi);
-	e_e_b_b->Branch("h_tt_mass", &h_tt_mass);
-	e_e_b_b->Branch("h_bb_pT", &h_bb_pT);
-	e_e_b_b->Branch("h_bb_eta", &h_bb_eta);
-	e_e_b_b->Branch("h_bb_phi", &h_bb_phi);
-	e_e_b_b->Branch("h_bb_mass", &h_bb_mass);
-	e_e_b_b->Branch("diH_pT", &diH_pT);
-	e_e_b_b->Branch("diH_eta", &diH_eta);
-	e_e_b_b->Branch("diH_phi", &diH_phi);
-	e_e_b_b->Branch("diH_mass", &diH_mass);
-	e_e_b_b->Branch("hT", &hT);
-	e_e_b_b->Branch("sT", &sT);
-	e_e_b_b->Branch("centrality", &centrality);
-	e_e_b_b->Branch("eVis", &eVis);
-	e_e_b_b->Branch("nJets", &nJets);
-	e_e_b_b->Branch("nBJets", &nBJets);
-	e_e_b_b->Branch("nTauJets", &nTauJets);
-	e_e_b_b->Branch("minJetPT", &minJetPT);
-	e_e_b_b->Branch("meanJetPT", &meanJetPT);
-	e_e_b_b->Branch("maxJetPT", &maxJetPT);
-	e_e_b_b->Branch("minJetMass", &minJetMass);
-	e_e_b_b->Branch("meanJetMass", &meanJetMass);
-	e_e_b_b->Branch("maxJetMass", &maxJetMass);
-	e_e_b_b->Branch("minJetEta", &minJetEta);
-	e_e_b_b->Branch("meanJetEta", &meanJetEta);
-	e_e_b_b->Branch("maxJetEta", &maxJetEta);
-	e_e_b_b->Branch("sphericityA", &sphericityA);
-	e_e_b_b->Branch("spherocityA", &spherocityA);
-	e_e_b_b->Branch("aplanarityA", &aplanarityA);
-	e_e_b_b->Branch("aplanorityA", &aplanorityA);
-	e_e_b_b->Branch("upsilonA", &upsilonA);
-	e_e_b_b->Branch("dShapeA", &dShapeA);
-	e_e_b_b->Branch("sphericityP", &sphericityP);
-	e_e_b_b->Branch("spherocityP", &spherocityP);
-	e_e_b_b->Branch("aplanarityP", &aplanarityP);
-	e_e_b_b->Branch("aplanorityP", &aplanorityP);
-	e_e_b_b->Branch("upsilonP", &upsilonP);
-	e_e_b_b->Branch("dShapeP", &dShapeP);
-	e_e_b_b->Branch("gen_t_0_pT", &gen_t_0_pT);
-	e_e_b_b->Branch("gen_t_0_eta", &gen_t_0_eta);
-	e_e_b_b->Branch("gen_t_0_phi", &gen_t_0_phi);
-	e_e_b_b->Branch("gen_t_0_E", &gen_t_0_E);
-	e_e_b_b->Branch("gen_t_1_pT", &gen_t_1_pT);
-	e_e_b_b->Branch("gen_t_1_eta", &gen_t_1_eta);
-	e_e_b_b->Branch("gen_t_1_phi", &gen_t_1_phi);
-	e_e_b_b->Branch("gen_t_1_E", &gen_t_1_E);
-	e_e_b_b->Branch("gen_b_0_pT", &gen_b_0_pT);
-	e_e_b_b->Branch("gen_b_0_eta", &gen_b_0_eta);
-	e_e_b_b->Branch("gen_b_0_phi", &gen_b_0_phi);
-	e_e_b_b->Branch("gen_b_0_E", &gen_b_0_E);
-	e_e_b_b->Branch("gen_b_1_pT", &gen_b_1_pT);
-	e_e_b_b->Branch("gen_b_1_eta", &gen_b_1_eta);
-	e_e_b_b->Branch("gen_b_1_phi", &gen_b_1_phi);
-	e_e_b_b->Branch("gen_b_1_E", &gen_b_1_E);
-	e_e_b_b->Branch("gen_diH_pT", &gen_diH_pT);
-	e_e_b_b->Branch("gen_diH_eta", &gen_diH_eta);
-	e_e_b_b->Branch("gen_diH_phi", &gen_diH_phi);
-	e_e_b_b->Branch("gen_diH_E", &gen_diH_E);
-	e_e_b_b->Branch("gen_diH_mass", &gen_diH_mass);
-	e_e_b_b->Branch("gen_h_bb_pT", &gen_h_bb_pT);
-	e_e_b_b->Branch("gen_h_bb_eta", &gen_h_bb_eta);
-	e_e_b_b->Branch("gen_h_bb_phi", &gen_h_bb_phi);
-	e_e_b_b->Branch("gen_h_bb_E", &gen_h_bb_E);
-	e_e_b_b->Branch("gen_h_tt_pT", &gen_h_tt_pT);
-	e_e_b_b->Branch("gen_h_tt_eta", &gen_h_tt_eta);
-	e_e_b_b->Branch("gen_h_tt_phi", &gen_h_tt_phi);
-	e_e_b_b->Branch("gen_h_tt_E", &gen_h_tt_E);
-	e_e_b_b->Branch("gen_mctMatch", &gen_mctMatch);
-	e_e_b_b->Branch("gen_weight", &weight);
-	TTree* mu_mu_b_b = new TTree("mu_mu_b_b", "#mu #mu b #bar{b}");
-	mu_mu_b_b->Branch("t_0_pT", &t_0_pT);
-	mu_mu_b_b->Branch("t_0_eta", &t_0_eta);
-	mu_mu_b_b->Branch("t_0_phi", &t_0_phi);
-	mu_mu_b_b->Branch("t_0_mass", &t_0_mass);
-	mu_mu_b_b->Branch("t_1_pT", &t_1_pT);
-	mu_mu_b_b->Branch("t_1_eta", &t_1_eta);
-	mu_mu_b_b->Branch("t_1_phi", &t_1_phi);
-	mu_mu_b_b->Branch("t_1_mass", &t_1_mass);
-	mu_mu_b_b->Branch("b_0_pT", &b_0_pT);
-	mu_mu_b_b->Branch("b_0_eta", &b_0_eta);
-	mu_mu_b_b->Branch("b_0_phi", &b_0_phi);
-	mu_mu_b_b->Branch("b_0_mass", &b_0_mass);
-	mu_mu_b_b->Branch("b_1_pT", &b_1_pT);
-	mu_mu_b_b->Branch("b_1_eta", &b_1_eta);
-	mu_mu_b_b->Branch("b_1_phi", &b_1_phi);
-	mu_mu_b_b->Branch("b_1_mass", &b_1_mass);
-	mu_mu_b_b->Branch("mPT_pT", &mPT_pT);
-	mu_mu_b_b->Branch("mPT_phi", &mPT_phi);
-	mu_mu_b_b->Branch("h_tt_pT", &h_tt_pT);
-	mu_mu_b_b->Branch("h_tt_eta", &h_tt_eta);
-	mu_mu_b_b->Branch("h_tt_phi", &h_tt_phi);
-	mu_mu_b_b->Branch("h_tt_mass", &h_tt_mass);
-	mu_mu_b_b->Branch("h_bb_pT", &h_bb_pT);
-	mu_mu_b_b->Branch("h_bb_eta", &h_bb_eta);
-	mu_mu_b_b->Branch("h_bb_phi", &h_bb_phi);
-	mu_mu_b_b->Branch("h_bb_mass", &h_bb_mass);
-	mu_mu_b_b->Branch("diH_pT", &diH_pT);
-	mu_mu_b_b->Branch("diH_eta", &diH_eta);
-	mu_mu_b_b->Branch("diH_phi", &diH_phi);
-	mu_mu_b_b->Branch("diH_mass", &diH_mass);
-	mu_mu_b_b->Branch("hT", &hT);
-	mu_mu_b_b->Branch("sT", &sT);
-	mu_mu_b_b->Branch("centrality", &centrality);
-	mu_mu_b_b->Branch("eVis", &eVis);
-	mu_mu_b_b->Branch("nJets", &nJets);
-	mu_mu_b_b->Branch("nBJets", &nBJets);
-	mu_mu_b_b->Branch("nTauJets", &nTauJets);
-	mu_mu_b_b->Branch("minJetPT", &minJetPT);
-	mu_mu_b_b->Branch("meanJetPT", &meanJetPT);
-	mu_mu_b_b->Branch("maxJetPT", &maxJetPT);
-	mu_mu_b_b->Branch("minJetMass", &minJetMass);
-	mu_mu_b_b->Branch("meanJetMass", &meanJetMass);
-	mu_mu_b_b->Branch("maxJetMass", &maxJetMass);
-	mu_mu_b_b->Branch("minJetEta", &minJetEta);
-	mu_mu_b_b->Branch("meanJetEta", &meanJetEta);
-	mu_mu_b_b->Branch("maxJetEta", &maxJetEta);
-	mu_mu_b_b->Branch("sphericityA", &sphericityA);
-	mu_mu_b_b->Branch("spherocityA", &spherocityA);
-	mu_mu_b_b->Branch("aplanarityA", &aplanarityA);
-	mu_mu_b_b->Branch("aplanorityA", &aplanorityA);
-	mu_mu_b_b->Branch("upsilonA", &upsilonA);
-	mu_mu_b_b->Branch("dShapeA", &dShapeA);
-	mu_mu_b_b->Branch("sphericityP", &sphericityP);
-	mu_mu_b_b->Branch("spherocityP", &spherocityP);
-	mu_mu_b_b->Branch("aplanarityP", &aplanarityP);
-	mu_mu_b_b->Branch("aplanorityP", &aplanorityP);
-	mu_mu_b_b->Branch("upsilonP", &upsilonP);
-	mu_mu_b_b->Branch("dShapeP", &dShapeP);
-	mu_mu_b_b->Branch("gen_t_0_pT", &gen_t_0_pT);
-	mu_mu_b_b->Branch("gen_t_0_eta", &gen_t_0_eta);
-	mu_mu_b_b->Branch("gen_t_0_phi", &gen_t_0_phi);
-	mu_mu_b_b->Branch("gen_t_0_E", &gen_t_0_E);
-	mu_mu_b_b->Branch("gen_t_1_pT", &gen_t_1_pT);
-	mu_mu_b_b->Branch("gen_t_1_eta", &gen_t_1_eta);
-	mu_mu_b_b->Branch("gen_t_1_phi", &gen_t_1_phi);
-	mu_mu_b_b->Branch("gen_t_1_E", &gen_t_1_E);
-	mu_mu_b_b->Branch("gen_b_0_pT", &gen_b_0_pT);
-	mu_mu_b_b->Branch("gen_b_0_eta", &gen_b_0_eta);
-	mu_mu_b_b->Branch("gen_b_0_phi", &gen_b_0_phi);
-	mu_mu_b_b->Branch("gen_b_0_E", &gen_b_0_E);
-	mu_mu_b_b->Branch("gen_b_1_pT", &gen_b_1_pT);
-	mu_mu_b_b->Branch("gen_b_1_eta", &gen_b_1_eta);
-	mu_mu_b_b->Branch("gen_b_1_phi", &gen_b_1_phi);
-	mu_mu_b_b->Branch("gen_b_1_E", &gen_b_1_E);
-	mu_mu_b_b->Branch("gen_diH_pT", &gen_diH_pT);
-	mu_mu_b_b->Branch("gen_diH_eta", &gen_diH_eta);
-	mu_mu_b_b->Branch("gen_diH_phi", &gen_diH_phi);
-	mu_mu_b_b->Branch("gen_diH_E", &gen_diH_E);
-	mu_mu_b_b->Branch("gen_diH_mass", &gen_diH_mass);
-	mu_mu_b_b->Branch("gen_h_bb_pT", &gen_h_bb_pT);
-	mu_mu_b_b->Branch("gen_h_bb_eta", &gen_h_bb_eta);
-	mu_mu_b_b->Branch("gen_h_bb_phi", &gen_h_bb_phi);
-	mu_mu_b_b->Branch("gen_h_bb_E", &gen_h_bb_E);
-	mu_mu_b_b->Branch("gen_h_tt_pT", &gen_h_tt_pT);
-	mu_mu_b_b->Branch("gen_h_tt_eta", &gen_h_tt_eta);
-	mu_mu_b_b->Branch("gen_h_tt_phi", &gen_h_tt_phi);
-	mu_mu_b_b->Branch("gen_h_tt_E", &gen_h_tt_E);
-	mu_mu_b_b->Branch("gen_mctMatch", &gen_mctMatch);
-	mu_mu_b_b->Branch("gen_weight", &weight);
-	TTree* e_mu_b_b = new TTree("e_mu_b_b", "e #mu b #bar{b}");
-	e_mu_b_b->Branch("t_0_pT", &t_0_pT);
-	e_mu_b_b->Branch("t_0_eta", &t_0_eta);
-	e_mu_b_b->Branch("t_0_phi", &t_0_phi);
-	e_mu_b_b->Branch("t_0_mass", &t_0_mass);
-	e_mu_b_b->Branch("t_1_pT", &t_1_pT);
-	e_mu_b_b->Branch("t_1_eta", &t_1_eta);
-	e_mu_b_b->Branch("t_1_phi", &t_1_phi);
-	e_mu_b_b->Branch("t_1_mass", &t_1_mass);
-	e_mu_b_b->Branch("b_0_pT", &b_0_pT);
-	e_mu_b_b->Branch("b_0_eta", &b_0_eta);
-	e_mu_b_b->Branch("b_0_phi", &b_0_phi);
-	e_mu_b_b->Branch("b_0_mass", &b_0_mass);
-	e_mu_b_b->Branch("b_1_pT", &b_1_pT);
-	e_mu_b_b->Branch("b_1_eta", &b_1_eta);
-	e_mu_b_b->Branch("b_1_phi", &b_1_phi);
-	e_mu_b_b->Branch("b_1_mass", &b_1_mass);
-	e_mu_b_b->Branch("mPT_pT", &mPT_pT);
-	e_mu_b_b->Branch("mPT_phi", &mPT_phi);
-	e_mu_b_b->Branch("h_tt_pT", &h_tt_pT);
-	e_mu_b_b->Branch("h_tt_eta", &h_tt_eta);
-	e_mu_b_b->Branch("h_tt_phi", &h_tt_phi);
-	e_mu_b_b->Branch("h_tt_mass", &h_tt_mass);
-	e_mu_b_b->Branch("h_bb_pT", &h_bb_pT);
-	e_mu_b_b->Branch("h_bb_eta", &h_bb_eta);
-	e_mu_b_b->Branch("h_bb_phi", &h_bb_phi);
-	e_mu_b_b->Branch("h_bb_mass", &h_bb_mass);
-	e_mu_b_b->Branch("diH_pT", &diH_pT);
-	e_mu_b_b->Branch("diH_eta", &diH_eta);
-	e_mu_b_b->Branch("diH_phi", &diH_phi);
-	e_mu_b_b->Branch("diH_mass", &diH_mass);
-	e_mu_b_b->Branch("hT", &hT);
-	e_mu_b_b->Branch("sT", &sT);
-	e_mu_b_b->Branch("centrality", &centrality);
-	e_mu_b_b->Branch("eVis", &eVis);
-	e_mu_b_b->Branch("nJets", &nJets);
-	e_mu_b_b->Branch("nBJets", &nBJets);
-	e_mu_b_b->Branch("nTauJets", &nTauJets);
-	e_mu_b_b->Branch("minJetPT", &minJetPT);
-	e_mu_b_b->Branch("meanJetPT", &meanJetPT);
-	e_mu_b_b->Branch("maxJetPT", &maxJetPT);
-	e_mu_b_b->Branch("minJetMass", &minJetMass);
-	e_mu_b_b->Branch("meanJetMass", &meanJetMass);
-	e_mu_b_b->Branch("maxJetMass", &maxJetMass);
-	e_mu_b_b->Branch("minJetEta", &minJetEta);
-	e_mu_b_b->Branch("meanJetEta", &meanJetEta);
-	e_mu_b_b->Branch("maxJetEta", &maxJetEta);
-	e_mu_b_b->Branch("sphericityA", &sphericityA);
-	e_mu_b_b->Branch("spherocityA", &spherocityA);
-	e_mu_b_b->Branch("aplanarityA", &aplanarityA);
-	e_mu_b_b->Branch("aplanorityA", &aplanorityA);
-	e_mu_b_b->Branch("upsilonA", &upsilonA);
-	e_mu_b_b->Branch("dShapeA", &dShapeA);
-	e_mu_b_b->Branch("sphericityP", &sphericityP);
-	e_mu_b_b->Branch("spherocityP", &spherocityP);
-	e_mu_b_b->Branch("aplanarityP", &aplanarityP);
-	e_mu_b_b->Branch("aplanorityP", &aplanorityP);
-	e_mu_b_b->Branch("upsilonP", &upsilonP);
-	e_mu_b_b->Branch("dShapeP", &dShapeP);
-	e_mu_b_b->Branch("gen_t_0_pT", &gen_t_0_pT);
-	e_mu_b_b->Branch("gen_t_0_eta", &gen_t_0_eta);
-	e_mu_b_b->Branch("gen_t_0_phi", &gen_t_0_phi);
-	e_mu_b_b->Branch("gen_t_0_E", &gen_t_0_E);
-	e_mu_b_b->Branch("gen_t_1_pT", &gen_t_1_pT);
-	e_mu_b_b->Branch("gen_t_1_eta", &gen_t_1_eta);
-	e_mu_b_b->Branch("gen_t_1_phi", &gen_t_1_phi);
-	e_mu_b_b->Branch("gen_t_1_E", &gen_t_1_E);
-	e_mu_b_b->Branch("gen_b_0_pT", &gen_b_0_pT);
-	e_mu_b_b->Branch("gen_b_0_eta", &gen_b_0_eta);
-	e_mu_b_b->Branch("gen_b_0_phi", &gen_b_0_phi);
-	e_mu_b_b->Branch("gen_b_0_E", &gen_b_0_E);
-	e_mu_b_b->Branch("gen_b_1_pT", &gen_b_1_pT);
-	e_mu_b_b->Branch("gen_b_1_eta", &gen_b_1_eta);
-	e_mu_b_b->Branch("gen_b_1_phi", &gen_b_1_phi);
-	e_mu_b_b->Branch("gen_b_1_E", &gen_b_1_E);
-	e_mu_b_b->Branch("gen_diH_pT", &gen_diH_pT);
-	e_mu_b_b->Branch("gen_diH_eta", &gen_diH_eta);
-	e_mu_b_b->Branch("gen_diH_phi", &gen_diH_phi);
-	e_mu_b_b->Branch("gen_diH_E", &gen_diH_E);
-	e_mu_b_b->Branch("gen_diH_mass", &gen_diH_mass);
-	e_mu_b_b->Branch("gen_h_bb_pT", &gen_h_bb_pT);
-	e_mu_b_b->Branch("gen_h_bb_eta", &gen_h_bb_eta);
-	e_mu_b_b->Branch("gen_h_bb_phi", &gen_h_bb_phi);
-	e_mu_b_b->Branch("gen_h_bb_E", &gen_h_bb_E);
-	e_mu_b_b->Branch("gen_h_tt_pT", &gen_h_tt_pT);
-	e_mu_b_b->Branch("gen_h_tt_eta", &gen_h_tt_eta);
-	e_mu_b_b->Branch("gen_h_tt_phi", &gen_h_tt_phi);
-	e_mu_b_b->Branch("gen_h_tt_E", &gen_h_tt_E);
-	e_mu_b_b->Branch("gen_mctMatch", &gen_mctMatch);
-	e_mu_b_b->Branch("gen_weight", &weight);
+	TTree* e_tau = new TTree("e_tau", "e #tau");
+	e_tau->Branch("t_0_pT", &t_0_pT);
+	e_tau->Branch("t_0_eta", &t_0_eta);
+	e_tau->Branch("t_0_phi", &t_0_phi);
+	e_tau->Branch("t_0_mass", &t_0_mass);
+	e_tau->Branch("t_0_mT", &t_0_mT);
+	e_tau->Branch("t_1_pT", &t_1_pT);
+	e_tau->Branch("t_1_eta", &t_1_eta);
+	e_tau->Branch("t_1_phi", &t_1_phi);
+	e_tau->Branch("t_1_mass", &t_1_mass);
+	e_tau->Branch("t_1_mT", &t_1_mT);
+	e_tau->Branch("mPT_pT", &mPT_pT);
+	e_tau->Branch("mPT_phi", &mPT_phi);
+	e_tau->Branch("h_tt_pT", &h_tt_pT);
+	e_tau->Branch("h_tt_eta", &h_tt_eta);
+	e_tau->Branch("h_tt_phi", &h_tt_phi);
+	e_tau->Branch("h_tt_mass", &h_tt_mass);
+	e_tau->Branch("gen_t_0_pT", &gen_t_0_pT);
+	e_tau->Branch("gen_t_0_eta", &gen_t_0_eta);
+	e_tau->Branch("gen_t_0_phi", &gen_t_0_phi);
+	e_tau->Branch("gen_t_0_E", &gen_t_0_E);
+	e_tau->Branch("gen_t_1_pT", &gen_t_1_pT);
+	e_tau->Branch("gen_t_1_eta", &gen_t_1_eta);
+	e_tau->Branch("gen_t_1_phi", &gen_t_1_phi);
+	e_tau->Branch("gen_t_1_E", &gen_t_1_E);
+	e_tau->Branch("gen_h_tt_pT", &gen_h_tt_pT);
+	e_tau->Branch("gen_h_tt_eta", &gen_h_tt_eta);
+	e_tau->Branch("gen_h_tt_phi", &gen_h_tt_phi);
+	e_tau->Branch("gen_h_tt_E", &gen_h_tt_E);
+	e_tau->Branch("gen_mctMatch", &gen_mctMatch);
+	e_tau->Branch("gen_weight", &weight);
+	TTree* mu_tau = new TTree("mu_tau", "#mu #tau_{h}");
+	mu_tau->Branch("t_0_pT", &t_0_pT);
+	mu_tau->Branch("t_0_eta", &t_0_eta);
+	mu_tau->Branch("t_0_phi", &t_0_phi);
+	mu_tau->Branch("t_0_mass", &t_0_mass);
+	mu_tau->Branch("t_0_mT", &t_0_mT);
+	mu_tau->Branch("t_1_pT", &t_1_pT);
+	mu_tau->Branch("t_1_eta", &t_1_eta);
+	mu_tau->Branch("t_1_phi", &t_1_phi);
+	mu_tau->Branch("t_1_mass", &t_1_mass);
+	mu_tau->Branch("t_1_mT", &t_1_mT);
+	mu_tau->Branch("mPT_pT", &mPT_pT);
+	mu_tau->Branch("mPT_phi", &mPT_phi);
+	mu_tau->Branch("h_tt_pT", &h_tt_pT);
+	mu_tau->Branch("h_tt_eta", &h_tt_eta);
+	mu_tau->Branch("h_tt_phi", &h_tt_phi);
+	mu_tau->Branch("h_tt_mass", &h_tt_mass);
+	mu_tau->Branch("gen_t_0_pT", &gen_t_0_pT);
+	mu_tau->Branch("gen_t_0_eta", &gen_t_0_eta);
+	mu_tau->Branch("gen_t_0_phi", &gen_t_0_phi);
+	mu_tau->Branch("gen_t_0_E", &gen_t_0_E);
+	mu_tau->Branch("gen_t_1_pT", &gen_t_1_pT);
+	mu_tau->Branch("gen_t_1_eta", &gen_t_1_eta);
+	mu_tau->Branch("gen_t_1_phi", &gen_t_1_phi);
+	mu_tau->Branch("gen_t_1_E", &gen_t_1_E);
+	mu_tau->Branch("gen_h_tt_pT", &gen_h_tt_pT);
+	mu_tau->Branch("gen_h_tt_eta", &gen_h_tt_eta);
+	mu_tau->Branch("gen_h_tt_phi", &gen_h_tt_phi);
+	mu_tau->Branch("gen_h_tt_E", &gen_h_tt_E);
+	mu_tau->Branch("gen_mctMatch", &gen_mctMatch);
+	mu_tau->Branch("gen_weight", &weight);
+	TTree* tau_tau = new TTree("tau_tau", "#tau_{h} #tau_{h}");
+	tau_tau->Branch("t_0_pT", &t_0_pT);
+	tau_tau->Branch("t_0_eta", &t_0_eta);
+	tau_tau->Branch("t_0_phi", &t_0_phi);
+	tau_tau->Branch("t_0_mass", &t_0_mass);
+	tau_tau->Branch("t_0_mT", &t_0_mT);
+	tau_tau->Branch("t_1_pT", &t_1_pT);
+	tau_tau->Branch("t_1_eta", &t_1_eta);
+	tau_tau->Branch("t_1_phi", &t_1_phi);
+	tau_tau->Branch("t_1_mass", &t_1_mass);
+	tau_tau->Branch("t_1_mT", &t_1_mT);
+	tau_tau->Branch("mPT_pT", &mPT_pT);
+	tau_tau->Branch("mPT_phi", &mPT_phi);
+	tau_tau->Branch("h_tt_pT", &h_tt_pT);
+	tau_tau->Branch("h_tt_eta", &h_tt_eta);
+	tau_tau->Branch("h_tt_phi", &h_tt_phi);
+	tau_tau->Branch("h_tt_mass", &h_tt_mass);
+	tau_tau->Branch("gen_t_0_pT", &gen_t_0_pT);
+	tau_tau->Branch("gen_t_0_eta", &gen_t_0_eta);
+	tau_tau->Branch("gen_t_0_phi", &gen_t_0_phi);
+	tau_tau->Branch("gen_t_0_E", &gen_t_0_E);
+	tau_tau->Branch("gen_t_1_pT", &gen_t_1_pT);
+	tau_tau->Branch("gen_t_1_eta", &gen_t_1_eta);
+	tau_tau->Branch("gen_t_1_phi", &gen_t_1_phi);
+	tau_tau->Branch("gen_t_1_E", &gen_t_1_E);
+	tau_tau->Branch("gen_h_tt_pT", &gen_h_tt_pT);
+	tau_tau->Branch("gen_h_tt_eta", &gen_h_tt_eta);
+	tau_tau->Branch("gen_h_tt_phi", &gen_h_tt_phi);
+	tau_tau->Branch("gen_h_tt_E", &gen_h_tt_E);
+	tau_tau->Branch("gen_mctMatch", &gen_mctMatch);
+	tau_tau->Branch("gen_weight", &weight);
+	TTree* e_e = new TTree("e_e", "e e");
+	e_e->Branch("t_0_pT", &t_0_pT);
+	e_e->Branch("t_0_eta", &t_0_eta);
+	e_e->Branch("t_0_phi", &t_0_phi);
+	e_e->Branch("t_0_mass", &t_0_mass);
+	e_e->Branch("t_0_mT", &t_0_mT);
+	e_e->Branch("t_1_pT", &t_1_pT);
+	e_e->Branch("t_1_eta", &t_1_eta);
+	e_e->Branch("t_1_phi", &t_1_phi);
+	e_e->Branch("t_1_mass", &t_1_mass);
+	e_e->Branch("t_1_mT", &t_1_mT);
+	e_e->Branch("mPT_pT", &mPT_pT);
+	e_e->Branch("mPT_phi", &mPT_phi);
+	e_e->Branch("h_tt_pT", &h_tt_pT);
+	e_e->Branch("h_tt_eta", &h_tt_eta);
+	e_e->Branch("h_tt_phi", &h_tt_phi);
+	e_e->Branch("h_tt_mass", &h_tt_mass);
+	e_e->Branch("gen_t_0_pT", &gen_t_0_pT);
+	e_e->Branch("gen_t_0_eta", &gen_t_0_eta);
+	e_e->Branch("gen_t_0_phi", &gen_t_0_phi);
+	e_e->Branch("gen_t_0_E", &gen_t_0_E);
+	e_e->Branch("gen_t_1_pT", &gen_t_1_pT);
+	e_e->Branch("gen_t_1_eta", &gen_t_1_eta);
+	e_e->Branch("gen_t_1_phi", &gen_t_1_phi);
+	e_e->Branch("gen_t_1_E", &gen_t_1_E);
+	e_e->Branch("gen_h_tt_pT", &gen_h_tt_pT);
+	e_e->Branch("gen_h_tt_eta", &gen_h_tt_eta);
+	e_e->Branch("gen_h_tt_phi", &gen_h_tt_phi);
+	e_e->Branch("gen_h_tt_E", &gen_h_tt_E);
+	e_e->Branch("gen_mctMatch", &gen_mctMatch);
+	e_e->Branch("gen_weight", &weight);
+	TTree* mu_mu = new TTree("mu_mu", "#mu #mu");
+	mu_mu->Branch("t_0_pT", &t_0_pT);
+	mu_mu->Branch("t_0_eta", &t_0_eta);
+	mu_mu->Branch("t_0_phi", &t_0_phi);
+	mu_mu->Branch("t_0_mass", &t_0_mass);
+	mu_mu->Branch("t_0_mT", &t_0_mT);
+	mu_mu->Branch("t_1_pT", &t_1_pT);
+	mu_mu->Branch("t_1_eta", &t_1_eta);
+	mu_mu->Branch("t_1_phi", &t_1_phi);
+	mu_mu->Branch("t_1_mass", &t_1_mass);
+	mu_mu->Branch("t_1_mT", &t_1_mT);
+	mu_mu->Branch("mPT_pT", &mPT_pT);
+	mu_mu->Branch("mPT_phi", &mPT_phi);
+	mu_mu->Branch("h_tt_pT", &h_tt_pT);
+	mu_mu->Branch("h_tt_eta", &h_tt_eta);
+	mu_mu->Branch("h_tt_phi", &h_tt_phi);
+	mu_mu->Branch("h_tt_mass", &h_tt_mass);
+	mu_mu->Branch("gen_t_0_pT", &gen_t_0_pT);
+	mu_mu->Branch("gen_t_0_eta", &gen_t_0_eta);
+	mu_mu->Branch("gen_t_0_phi", &gen_t_0_phi);
+	mu_mu->Branch("gen_t_0_E", &gen_t_0_E);
+	mu_mu->Branch("gen_t_1_pT", &gen_t_1_pT);
+	mu_mu->Branch("gen_t_1_eta", &gen_t_1_eta);
+	mu_mu->Branch("gen_t_1_phi", &gen_t_1_phi);
+	mu_mu->Branch("gen_t_1_E", &gen_t_1_E);
+	mu_mu->Branch("gen_h_tt_pT", &gen_h_tt_pT);
+	mu_mu->Branch("gen_h_tt_eta", &gen_h_tt_eta);
+	mu_mu->Branch("gen_h_tt_phi", &gen_h_tt_phi);
+	mu_mu->Branch("gen_h_tt_E", &gen_h_tt_E);
+	mu_mu->Branch("gen_mctMatch", &gen_mctMatch);
+	mu_mu->Branch("gen_weight", &weight);
+	TTree* e_mu = new TTree("e_mu", "e #mu");
+	e_mu->Branch("t_0_pT", &t_0_pT);
+	e_mu->Branch("t_0_eta", &t_0_eta);
+	e_mu->Branch("t_0_phi", &t_0_phi);
+	e_mu->Branch("t_0_mass", &t_0_mass);
+	e_mu->Branch("t_0_mT", &t_0_mT);
+	e_mu->Branch("t_1_pT", &t_1_pT);
+	e_mu->Branch("t_1_eta", &t_1_eta);
+	e_mu->Branch("t_1_phi", &t_1_phi);
+	e_mu->Branch("t_1_mass", &t_1_mass);
+	e_mu->Branch("t_1_mT", &t_1_mT);
+	e_mu->Branch("mPT_pT", &mPT_pT);
+	e_mu->Branch("mPT_phi", &mPT_phi);
+	e_mu->Branch("h_tt_pT", &h_tt_pT);
+	e_mu->Branch("h_tt_eta", &h_tt_eta);
+	e_mu->Branch("h_tt_phi", &h_tt_phi);
+	e_mu->Branch("h_tt_mass", &h_tt_mass);
+	e_mu->Branch("gen_t_0_pT", &gen_t_0_pT);
+	e_mu->Branch("gen_t_0_eta", &gen_t_0_eta);
+	e_mu->Branch("gen_t_0_phi", &gen_t_0_phi);
+	e_mu->Branch("gen_t_0_E", &gen_t_0_E);
+	e_mu->Branch("gen_t_1_pT", &gen_t_1_pT);
+	e_mu->Branch("gen_t_1_eta", &gen_t_1_eta);
+	e_mu->Branch("gen_t_1_phi", &gen_t_1_phi);
+	e_mu->Branch("gen_t_1_E", &gen_t_1_E);
+	e_mu->Branch("gen_h_tt_pT", &gen_h_tt_pT);
+	e_mu->Branch("gen_h_tt_eta", &gen_h_tt_eta);
+	e_mu->Branch("gen_h_tt_phi", &gen_h_tt_phi);
+	e_mu->Branch("gen_h_tt_E", &gen_h_tt_E);
+	e_mu->Branch("gen_mctMatch", &gen_mctMatch);
+	e_mu->Branch("gen_weight", &weight);
 	std::cout << "Variables initialised\n";
 	//___________________________________________
 	//Initialise plots___________________________
@@ -1565,96 +871,75 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	std::map<std::string, TH1D*> mcTruthPlots;
 	TH1D* h_datasetSizes = new TH1D("Dataset_sizes", "Dataset sizes", 7, -0.7, 0.7);
 	mcTruthPlots.insert(std::make_pair("cuts", new TH1D("mcTruth_cutFlow", "MC Truth Cuts", 20, -2.0, 2.0)));
-	mcTruthPlots.insert(std::make_pair("bMatch", new TH1D("mcTruth_bJetMatching", "#DeltaR(b, jet)", 50, 0.0, 0.5)));
 	mcTruthPlots.insert(std::make_pair("tauMatch", new TH1D("mcTruth_tauJetMatching", "#DeltaR(#tau, jet)", 50, 0.0, 0.5)));
 	mcTruthPlots.insert(std::make_pair("higgsDecay", new TH1D("mcTruth_higgsDecay", "Higgs product |PID|", 50, 0, 50)));
-	TH1D* h_e_tau_b_b_cutFlow;
-	TH1D* h_mu_tau_b_b_cutFlow;
-	TH1D* h_tau_tau_b_b_cutFlow;
-	TH1D* h_e_e_b_b_cutFlow;
-	TH1D* h_mu_mu_b_b_cutFlow;
-	TH1D* h_e_mu_b_b_cutFlow;
+	TH1D* h_e_tau_cutFlow;
+	TH1D* h_mu_tau_cutFlow;
+	TH1D* h_tau_tau_cutFlow;
+	TH1D* h_e_e_cutFlow;
+	TH1D* h_mu_mu_cutFlow;
+	TH1D* h_e_mu_cutFlow;
 	if (options["-t"] == "0") {
-		h_e_tau_b_b_cutFlow = new TH1D("e_tau_b_b_Cut_Flow", "e #tau_{h} b #bar{b} cut flow", 8, -0.8, 0.8);
-		h_mu_tau_b_b_cutFlow = new TH1D("mu_tau_b_b_Cut_Flow", "#mu #tau_{h} b #bar{b} cut flow", 8, -0.8, 0.8);
-		h_tau_tau_b_b_cutFlow = new TH1D("tau_tau_b_b_Cut_Flow", "#tau_{h} #tau_{h} b #bar{b} cut flow", 7, -0.7, 0.7);
-		h_e_e_b_b_cutFlow = new TH1D("e_e_b_b_Cut_Flow", "e e b #bar{b} cut flow", 8, -0.8, 0.8);
-		h_mu_mu_b_b_cutFlow = new TH1D("mu_mu_b_b_Cut_Flow", "#mu #mu b #bar{b} cut flow", 8, -0.8, 0.8);
-		h_e_mu_b_b_cutFlow = new TH1D("e_mu_b_b_Cut_Flow", "e #mu b #bar{b} cut flow", 8, -0.8, 0.8);
+		h_e_tau_cutFlow = new TH1D("e_tau_Cut_Flow", "e #tau_{h}cut flow", 8, -0.8, 0.8);
+		h_mu_tau_cutFlow = new TH1D("mu_tau_Cut_Flow", "#mu #tau_{h}cut flow", 8, -0.8, 0.8);
+		h_tau_tau_cutFlow = new TH1D("tau_tau_Cut_Flow", "#tau_{h} #tau_{h}cut flow", 7, -0.7, 0.7);
+		h_e_e_cutFlow = new TH1D("e_e_Cut_Flow", "e ecut flow", 8, -0.8, 0.8);
+		h_mu_mu_cutFlow = new TH1D("mu_mu_Cut_Flow", "#mu #mu cut flow", 8, -0.8, 0.8);
+		h_e_mu_cutFlow = new TH1D("e_mu_Cut_Flow", "e #mu cut flow", 8, -0.8, 0.8);
 	} else {
-		h_e_tau_b_b_cutFlow = new TH1D("e_tau_b_b_Cut_Flow", "e #tau_{h} b #bar{b} cut flow", 9, -0.9, 0.9);
-		h_mu_tau_b_b_cutFlow = new TH1D("mu_tau_b_b_Cut_Flow", "#mu #tau_{h} b #bar{b} cut flow", 9, -0.9, 0.9);
-		h_tau_tau_b_b_cutFlow = new TH1D("tau_tau_b_b_Cut_Flow", "#tau_{h} #tau_{h} b #bar{b} cut flow", 8, -0.8, 0.8);
-		h_e_e_b_b_cutFlow = new TH1D("e_e_b_b_Cut_Flow", "e e b #bar{b} cut flow", 9, -0.9, 0.9);
-		h_mu_mu_b_b_cutFlow = new TH1D("mu_mu_b_b_Cut_Flow", "#mu #mu b #bar{b} cut flow", 9, -0.9, 0.9);
-		h_e_mu_b_b_cutFlow = new TH1D("e_mu_b_b_Cut_Flow", "e #mu b #bar{b} cut flow", 9, -0.9, 0.9);
+		h_e_tau_cutFlow = new TH1D("e_tau_Cut_Flow", "e #tau_{h} cut flow", 9, -0.9, 0.9);
+		h_mu_tau_cutFlow = new TH1D("mu_tau_Cut_Flow", "#mu #tau_{h} cut flow", 9, -0.9, 0.9);
+		h_tau_tau_cutFlow = new TH1D("tau_tau_Cut_Flow", "#tau_{h} #tau_{h} cut flow", 8, -0.8, 0.8);
+		h_e_e_cutFlow = new TH1D("e_e_Cut_Flow", "e e b cut flow", 9, -0.9, 0.9);
+		h_mu_mu_cutFlow = new TH1D("mu_mu_Cut_Flow", "#mu #mu cut flow", 9, -0.9, 0.9);
+		h_e_mu_cutFlow = new TH1D("e_mu_Cut_Flow", "e #mu cut flow", 9, -0.9, 0.9);
 	}
 	h_datasetSizes->GetXaxis()->SetBinLabel(1, "All");
-	h_datasetSizes->GetXaxis()->SetBinLabel(2, "#mu #tau_{h} b #bar{b}");
-	h_datasetSizes->GetXaxis()->SetBinLabel(3, "e #tau_{h} b #bar{b}");
-	h_datasetSizes->GetXaxis()->SetBinLabel(4, "#tau_{h} #tau_{h} b #bar{b}");
-	h_datasetSizes->GetXaxis()->SetBinLabel(5, "e e b #bar{b}");
-	h_datasetSizes->GetXaxis()->SetBinLabel(6, "e #mu b #bar{b}");
-	h_datasetSizes->GetXaxis()->SetBinLabel(7, "#mu #mu b #bar{b}");
-	h_e_tau_b_b_cutFlow->GetXaxis()->SetBinLabel(1, "All");
-	h_e_tau_b_b_cutFlow->GetXaxis()->SetBinLabel(2, "Quality #tau");
-	h_e_tau_b_b_cutFlow->GetXaxis()->SetBinLabel(3, "Quality b#bar{b}");
-	h_e_tau_b_b_cutFlow->GetXaxis()->SetBinLabel(4, "Quality e");
-	h_e_tau_b_b_cutFlow->GetXaxis()->SetBinLabel(5, "1 e & 0 #mu");
-	h_e_tau_b_b_cutFlow->GetXaxis()->SetBinLabel(6, "OS");
-	h_e_tau_b_b_cutFlow->GetXaxis()->SetBinLabel(7, "m_{#tau#tau} Cut");
-	h_e_tau_b_b_cutFlow->GetXaxis()->SetBinLabel(8, "m_{b#bar{b}} Cut");
-	if (options["-t"] == "1") h_e_tau_b_b_cutFlow->GetXaxis()->SetBinLabel(9, "MC truth");
-	h_mu_tau_b_b_cutFlow->GetXaxis()->SetBinLabel(1, "All");
-	h_mu_tau_b_b_cutFlow->GetXaxis()->SetBinLabel(2, "Quality #tau");
-	h_mu_tau_b_b_cutFlow->GetXaxis()->SetBinLabel(3, "Quality b#bar{b}");
-	h_mu_tau_b_b_cutFlow->GetXaxis()->SetBinLabel(4, "Quality #mu");
-	h_mu_tau_b_b_cutFlow->GetXaxis()->SetBinLabel(5, "1 #mu & 0 e");
-	h_mu_tau_b_b_cutFlow->GetXaxis()->SetBinLabel(6, "OS");
-	h_mu_tau_b_b_cutFlow->GetXaxis()->SetBinLabel(7, "m_{#tau#tau} Cut");
-	h_mu_tau_b_b_cutFlow->GetXaxis()->SetBinLabel(8, "m_{b#bar{b}} Cut");
-	if (options["-t"] == "1") h_mu_tau_b_b_cutFlow->GetXaxis()->SetBinLabel(9, "MC truth");
-	h_tau_tau_b_b_cutFlow->GetXaxis()->SetBinLabel(1, "All");
-	h_tau_tau_b_b_cutFlow->GetXaxis()->SetBinLabel(2, "Quality #tau#tau");
-	h_tau_tau_b_b_cutFlow->GetXaxis()->SetBinLabel(3, "Quality b#bar{b}");
-	h_tau_tau_b_b_cutFlow->GetXaxis()->SetBinLabel(4, "0 e & 0 #mu");
-	h_tau_tau_b_b_cutFlow->GetXaxis()->SetBinLabel(5, "OS");
-	h_tau_tau_b_b_cutFlow->GetXaxis()->SetBinLabel(6, "m_{#tau#tau} Cut");
-	h_tau_tau_b_b_cutFlow->GetXaxis()->SetBinLabel(7, "m_{b#bar{b}} Cut");
-	if (options["-t"] == "1") h_tau_tau_b_b_cutFlow->GetXaxis()->SetBinLabel(8, "MC truth");
-	h_e_e_b_b_cutFlow->GetXaxis()->SetBinLabel(1, "All");
-	h_e_e_b_b_cutFlow->GetXaxis()->SetBinLabel(2, "Quality di-e");
-	h_e_e_b_b_cutFlow->GetXaxis()->SetBinLabel(3, "2 e & 0 #mu");
-	h_e_e_b_b_cutFlow->GetXaxis()->SetBinLabel(4, "OS");
-	h_e_e_b_b_cutFlow->GetXaxis()->SetBinLabel(5, "Quality b#bar{b}");
-	h_e_e_b_b_cutFlow->GetXaxis()->SetBinLabel(6, "0 #tau_{h}");
-	h_e_e_b_b_cutFlow->GetXaxis()->SetBinLabel(7, "m_{#tau#tau} Cut");
-	h_e_e_b_b_cutFlow->GetXaxis()->SetBinLabel(8, "m_{b#bar{b}} Cut");
-	if (options["-t"] == "1") h_e_e_b_b_cutFlow->GetXaxis()->SetBinLabel(9, "MC truth");
-	h_e_mu_b_b_cutFlow->GetXaxis()->SetBinLabel(1, "All");
-	h_e_mu_b_b_cutFlow->GetXaxis()->SetBinLabel(2, "Quality e and #mu");
-	h_e_mu_b_b_cutFlow->GetXaxis()->SetBinLabel(3, "1 e & 1 #mu");
-	h_e_mu_b_b_cutFlow->GetXaxis()->SetBinLabel(4, "OS");
-	h_e_mu_b_b_cutFlow->GetXaxis()->SetBinLabel(5, "Quality b#bar{b}");
-	h_e_mu_b_b_cutFlow->GetXaxis()->SetBinLabel(6, "0 #tau_{h}");
-	h_e_mu_b_b_cutFlow->GetXaxis()->SetBinLabel(7, "m_{#tau#tau} Cut");
-	h_e_mu_b_b_cutFlow->GetXaxis()->SetBinLabel(8, "m_{b#bar{b}} Cut");
-	if (options["-t"] == "1") h_e_mu_b_b_cutFlow->GetXaxis()->SetBinLabel(9, "MC truth");
-	h_mu_mu_b_b_cutFlow->GetXaxis()->SetBinLabel(1, "All");
-	h_mu_mu_b_b_cutFlow->GetXaxis()->SetBinLabel(2, "Quality di-#mu");
-	h_mu_mu_b_b_cutFlow->GetXaxis()->SetBinLabel(3, "2 #mu & 0 e");
-	h_mu_mu_b_b_cutFlow->GetXaxis()->SetBinLabel(4, "OS");
-	h_mu_mu_b_b_cutFlow->GetXaxis()->SetBinLabel(5, "Quality b#bar{b}");
-	h_mu_mu_b_b_cutFlow->GetXaxis()->SetBinLabel(6, "0 #tau_{h}");
-	h_mu_mu_b_b_cutFlow->GetXaxis()->SetBinLabel(7, "m_{#tau#tau} Cut");
-	h_mu_mu_b_b_cutFlow->GetXaxis()->SetBinLabel(8, "m_{b#bar{b}} Cut");
-	if (options["-t"] == "1") h_mu_mu_b_b_cutFlow->GetXaxis()->SetBinLabel(9, "MC truth");
-	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(1, "hh->bb#tau#tau check");
-	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(2, "hh->bb#tau#tau pass");
+	h_datasetSizes->GetXaxis()->SetBinLabel(2, "#mu #tau_{h}");
+	h_datasetSizes->GetXaxis()->SetBinLabel(3, "e #tau_{h}");
+	h_datasetSizes->GetXaxis()->SetBinLabel(4, "#tau_{h} #tau_{h}");
+	h_datasetSizes->GetXaxis()->SetBinLabel(5, "e e");
+	h_datasetSizes->GetXaxis()->SetBinLabel(6, "e #mu");
+	h_datasetSizes->GetXaxis()->SetBinLabel(7, "#mu #mu");
+	h_e_tau_cutFlow->GetXaxis()->SetBinLabel(1, "All");
+	h_e_tau_cutFlow->GetXaxis()->SetBinLabel(2, "Quality #tau");
+	h_e_tau_cutFlow->GetXaxis()->SetBinLabel(4, "Quality e");
+	h_e_tau_cutFlow->GetXaxis()->SetBinLabel(5, "1 e & 0 #mu");
+	h_e_tau_cutFlow->GetXaxis()->SetBinLabel(6, "OS");
+	if (options["-t"] == "1") h_e_tau_cutFlow->GetXaxis()->SetBinLabel(9, "MC truth");
+	h_mu_tau_cutFlow->GetXaxis()->SetBinLabel(1, "All");
+	h_mu_tau_cutFlow->GetXaxis()->SetBinLabel(2, "Quality #tau");
+	h_mu_tau_cutFlow->GetXaxis()->SetBinLabel(4, "Quality #mu");
+	h_mu_tau_cutFlow->GetXaxis()->SetBinLabel(5, "1 #mu & 0 e");
+	h_mu_tau_cutFlow->GetXaxis()->SetBinLabel(6, "OS");
+	if (options["-t"] == "1") h_mu_tau_cutFlow->GetXaxis()->SetBinLabel(9, "MC truth");
+	h_tau_tau_cutFlow->GetXaxis()->SetBinLabel(1, "All");
+	h_tau_tau_cutFlow->GetXaxis()->SetBinLabel(2, "Quality #tau#tau");
+	h_tau_tau_cutFlow->GetXaxis()->SetBinLabel(4, "0 e & 0 #mu");
+	h_tau_tau_cutFlow->GetXaxis()->SetBinLabel(5, "OS");
+	if (options["-t"] == "1") h_tau_tau_cutFlow->GetXaxis()->SetBinLabel(8, "MC truth");
+	h_e_e_cutFlow->GetXaxis()->SetBinLabel(1, "All");
+	h_e_e_cutFlow->GetXaxis()->SetBinLabel(2, "Quality di-e");
+	h_e_e_cutFlow->GetXaxis()->SetBinLabel(3, "2 e & 0 #mu");
+	h_e_e_cutFlow->GetXaxis()->SetBinLabel(4, "OS");
+	h_e_e_cutFlow->GetXaxis()->SetBinLabel(6, "0 #tau_{h}");
+	if (options["-t"] == "1") h_e_e_cutFlow->GetXaxis()->SetBinLabel(9, "MC truth");
+	h_e_mu_cutFlow->GetXaxis()->SetBinLabel(1, "All");
+	h_e_mu_cutFlow->GetXaxis()->SetBinLabel(2, "Quality e and #mu");
+	h_e_mu_cutFlow->GetXaxis()->SetBinLabel(3, "1 e & 1 #mu");
+	h_e_mu_cutFlow->GetXaxis()->SetBinLabel(4, "OS");
+	h_e_mu_cutFlow->GetXaxis()->SetBinLabel(6, "0 #tau_{h}");
+	if (options["-t"] == "1") h_e_mu_cutFlow->GetXaxis()->SetBinLabel(9, "MC truth");
+	h_mu_mu_cutFlow->GetXaxis()->SetBinLabel(1, "All");
+	h_mu_mu_cutFlow->GetXaxis()->SetBinLabel(2, "Quality di-#mu");
+	h_mu_mu_cutFlow->GetXaxis()->SetBinLabel(3, "2 #mu & 0 e");
+	h_mu_mu_cutFlow->GetXaxis()->SetBinLabel(4, "OS");
+	h_mu_mu_cutFlow->GetXaxis()->SetBinLabel(6, "0 #tau_{h}");
+	if (options["-t"] == "1") h_mu_mu_cutFlow->GetXaxis()->SetBinLabel(9, "MC truth");
+	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(1, "hh->#tau#tau check");
+	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(2, "hh->#tau#tau pass");
 	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(3, "MC-truth check");
 	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(4, "MC-truth pass");
-	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(5, "b-jets check");
-	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(6, "b-jets pass");
 	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(7, "#taus check");
 	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(8, "#taus pass");
 	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(9, "h->#tau#tau->ee check");
@@ -1682,9 +967,10 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	//Loop through events____________________
 	Long64_t nEvents = reader->fChain->GetEntriesFast();
 	std::cout << "Total number of events in file: " << nEvents << "\n";
-	std::vector<int> taus, bJets, electrons, muons;
-	TLorentzVector v_tau_0, v_tau_1, v_bJet_0, v_bJet_1, v_higgs_tt, v_higgs_bb, v_diHiggs;
-	TLorentzVector v_gen_higgs_bb, v_gen_higgs_tt, v_gen_diHiggs, v_gen_tau_0, v_gen_tau_1, v_gen_bJet_0, v_gen_bJet_1;
+	std::vector<int> taus, electrons, muons;
+	TLorentzVector v_tau_0, v_tau_1 v_higgs_tt, v_mPT;
+	TLorentzVector v_gen_higgs_tt, v_gen_tau_0, v_gen_tau_1;
+	bool addMuon, addElectron;
 	std::cout << "Beginning event loop\n";
 	for (Long64_t cEvent = 0; cEvent < nEvents; cEvent++) {
 		if (debug) std::cout << "Loading event " << cEvent << "\n";
@@ -1697,875 +983,559 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 				100*cEvent/nEvents << "%\n";
 		h_datasetSizes->Fill("All", 1);
 		eventAccepted = false;
-		int hBB = -1, hTauTau = -1;
-		/*if (options["-t"] == "1") {
-			if (!correctDecayChannel(options["-i"], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Event is not h->bbtautau
-		}*/
-		if (debug) std::cout << "Getting electrons and muons\n";
-		nElectrons = getNElectrons(reader);
-		nMuons = getNMuons(reader);
-		if (debug) std::cout << nElectrons << " electrons " << nMuons << " muons\n";
-		//Check for mu tau b b finalstates___
-		h_mu_tau_b_b_cutFlow->Fill("All", 1);
+		//Check for mu tau finalstates___
+		h_mu_tau_cutFlow->Fill("All", 1);
 		electrons.clear();
 		muons.clear();
 		taus.clear();
-		bJets.clear();
-		finalstateSet("mu_tau_b_b");
-		if (debug) std::cout << "Running mu tau b b\n";
-		for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
-			if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
-					&& std::abs(reader->Jet_Eta[i]) < tauEtaMax) { //Quality tau
-				taus.push_back(i);
-			}
-			if (reader->Jet_TauTag[i] == 0 && reader->Jet_BTag[i] == 1 && reader->Jet_PT[i] > bJetPTMin
-					&& std::abs(reader->Jet_Eta[i]) < bJetEtaMax) { //Quality b jet
-				bJets.push_back(i);
-			}
-		}
-		if (taus.size() >= 1) {//Quality tau
-			h_mu_tau_b_b_cutFlow->Fill("Quality #tau", 1);
-			if (bJets.size() >= 2) {//Quality b jets pairs found
-				h_mu_tau_b_b_cutFlow->Fill("Quality b#bar{b}", 1);
-				for (int i = 0; i < reader->MuonLoose_size; i++) { //Loop through muons
-					if (reader->MuonLoose_PT[i] > muPTMin && std::abs(reader->MuonLoose_Eta[i]) < muEtaMax
-							&& reader->MuonLoose_IsolationVar[i] < muIsoMax) { //Quality muon
-						muons.push_back(i);
-					}
-				}
-				if (muons.size() >= 1) { //Quality muon found
-					h_mu_tau_b_b_cutFlow->Fill("Quality #mu", 1);
-					if (nMuons == 1 && nElectrons == 0) {
-						h_mu_tau_b_b_cutFlow->Fill("1 #mu & 0 e", 1);
-						if (getOSTauLeptonPair(reader, &taus, &muons, &tau_0, &lepton_0, false) == true) { //Quality OS pair found
-							h_mu_tau_b_b_cutFlow->Fill("OS", 1);
-							if (selectBJets(reader, &bJets, &bJet_0, &bJet_1) == true) { //Quality b-jet pair found
-								v_tau_1 = getTauLepton(reader, lepton_0, "muon");
-								v_tau_0 = getTauHadron(reader, tau_0);
-								v_higgs_tt = getHiggs2Taus(reader, v_tau_0, v_tau_1);
-								if (!massCut || (v_higgs_tt.M() >= higgsMassMin && v_higgs_tt.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
-									h_mu_tau_b_b_cutFlow->Fill("m_{#tau#tau} Cut", 1);
-									v_bJet_0 = getBJet(reader, bJet_0);
-									v_bJet_1 = getBJet(reader, bJet_1);
-									v_higgs_bb = getHiggs2Bs(v_bJet_0, v_bJet_1);
-									if (!massCut || (v_higgs_bb.M() >= higgsMassMin && v_higgs_bb.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
-										h_mu_tau_b_b_cutFlow->Fill("m_{b#bar{b}} Cut", 1);
-										v_diHiggs = getDiHiggs(v_higgs_tt, v_higgs_bb);
-										gen_mctMatch = false;
-										if (options["-t"] == "1") {
-											if (!correctDecayChannel(options["-i"], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Checks if event is h->bbtautau
-											gen_mctMatch = truthCut(options["-i"], cEvent, bJet_0, bJet_1, //Checks final-state selection was correct
-													tau_0, lepton_0, hBB, hTauTau, "tau:muon",
-													&mcTruthPlots, &v_gen_higgs_bb, &v_gen_higgs_tt,
-													&v_gen_tau_0, &v_gen_tau_1, &v_gen_bJet_0, &v_gen_bJet_1);
-										}
-										if (options["-t"] == "1" & gen_mctMatch) {
-											h_mu_tau_b_b_cutFlow->Fill("MC truth", 1);
-										}
-										if (debug) std::cout << "Accepted mu_tau_b_b event\n";
-										v_gen_diHiggs = getDiHiggs(v_gen_higgs_tt, v_gen_higgs_bb);
-										gen_t_0_pT = v_gen_tau_0.Pt();
-										gen_t_0_eta = v_gen_tau_0.Eta();
-										gen_t_0_phi = v_gen_tau_0.Phi();
-										gen_t_0_E = v_gen_tau_0.E();
-										gen_t_1_pT = v_gen_tau_1.Pt();
-										gen_t_1_eta = v_gen_tau_1.Eta();
-										gen_t_1_phi = v_gen_tau_1.Phi();
-										gen_t_1_E = v_gen_tau_1.E();
-										gen_b_0_pT = v_gen_bJet_0.Pt();
-										gen_b_0_eta = v_gen_bJet_0.Eta();
-										gen_b_0_phi = v_gen_bJet_0.Phi();
-										gen_b_0_E = v_gen_bJet_0.E();
-										gen_b_1_pT = v_gen_bJet_1.Pt();
-										gen_b_1_eta = v_gen_bJet_1.Eta();
-										gen_b_1_phi = v_gen_bJet_1.Phi();
-										gen_b_1_E = v_gen_bJet_1.E();
-										gen_diH_pT = v_gen_diHiggs.Pt();
-										gen_diH_eta = v_gen_diHiggs.Eta();
-										gen_diH_phi = v_gen_diHiggs.Phi();
-										gen_diH_E = v_gen_diHiggs.E();
-										gen_diH_mass = v_gen_diHiggs.M();
-										gen_h_bb_pT = v_gen_higgs_bb.Pt();
-										gen_h_bb_eta = v_gen_higgs_bb.Eta();
-										gen_h_bb_phi = v_gen_higgs_bb.Phi();
-										gen_h_bb_E = v_gen_higgs_bb.E();
-										gen_h_tt_pT = v_gen_higgs_tt.Pt();
-										gen_h_tt_eta = v_gen_higgs_tt.Eta();
-										gen_h_tt_phi = v_gen_higgs_tt.Phi();
-										gen_h_tt_E = v_gen_higgs_tt.E();
-										t_0_pT = v_tau_0.Pt();
-										t_0_eta = v_tau_0.Eta();
-										t_0_phi = v_tau_0.Phi();
-										t_0_mass = v_tau_0.M();
-										t_1_pT = v_tau_1.Pt();
-										t_1_eta = v_tau_1.Eta();
-										t_1_phi = v_tau_1.Phi();
-										t_1_mass = muMass;
-										b_0_pT = v_bJet_0.Pt();
-										b_0_eta = v_bJet_0.Eta();
-										b_0_phi = v_bJet_0.Phi();
-										b_0_mass = v_bJet_0.M();
-										b_1_pT = v_bJet_1.Pt();
-										b_1_eta = v_bJet_1.Eta();
-										b_1_phi = v_bJet_1.Phi();
-										b_1_mass = v_bJet_1.M();
-										mPT_pT = reader->MissingET_MET[0];
-										mPT_phi = reader->MissingET_Phi[0];
-										h_tt_pT = v_higgs_tt.Pt();
-										h_tt_eta = v_higgs_tt.Eta();
-										h_tt_phi = v_higgs_tt.Phi();
-										h_tt_mass = v_higgs_tt.M();
-										h_bb_pT = v_higgs_bb.Pt();
-										h_bb_eta = v_higgs_bb.Eta();
-										h_bb_phi = v_higgs_bb.Phi();
-										h_bb_mass = v_higgs_bb.M();
-										diH_pT = v_diHiggs.Pt();
-										diH_eta = v_diHiggs.Eta();
-										diH_phi = v_diHiggs.Phi();
-										diH_mass = v_diHiggs.M();
-										getGlobalEventInfo(options["-i"], cEvent,
-												&hT, &sT, &centrality, &eVis,
-												&nJets, &nBJets, &nTauJets,
-												&minJetPT, &meanJetPT, &maxJetPT,
-												&minJetMass, &meanJetMass, &maxJetMass,
-												&minJetEta, &meanJetEta, &maxJetEta,
-												&sphericityA, &spherocityA,
-												&aplanarityA, &aplanorityA,
-												&upsilonA, &dShapeA);
-										getPrimaryEventShapes(v_tau_0, v_tau_1, v_bJet_0, v_bJet_1,
-												&sphericityP, &spherocityP,
-												&aplanarityP, &aplanorityP,
-												&upsilonP, &dShapeP);
-										weight = (double)*reader->Event_Weight;
-										mu_tau_b_b->Fill();
-										h_datasetSizes->Fill("#mu #tau_{h} b #bar{b}", 1);
-										eventAccepted = true;
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-		//___________________________________
-		if (eventAccepted) continue;
-		//Check for e tau b b finalstates____
-		h_e_tau_b_b_cutFlow->Fill("All", 1);
-		electrons.clear();
-		muons.clear();
-		taus.clear();
-		bJets.clear();
-		finalstateSet("e_tau_b_b");
-		if (debug) std::cout << "Running e tau b b\n";
-		for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
-			if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
-					&& std::abs(reader->Jet_Eta[i]) < tauEtaMax) { //Quality tau
-				taus.push_back(i);
-			}
-			if (reader->Jet_TauTag[i] == 0 && reader->Jet_BTag[i] == 1 && reader->Jet_PT[i] > bJetPTMin
-					&& std::abs(reader->Jet_Eta[i]) < bJetEtaMax) { //Quality b jet
-				bJets.push_back(i);
-			}
-		}
-		if (taus.size() >= 1) {//Quality tau
-			h_e_tau_b_b_cutFlow->Fill("Quality #tau", 1);
-			if (bJets.size() >= 2) {//Quality b jets pairs found
-				h_e_tau_b_b_cutFlow->Fill("Quality b#bar{b}", 1);
-				for (int i = 0; i < reader->Electron_size; i++) { //Loop through electrons
-					if (reader->Electron_PT[i] > ePTMin && std::abs(reader->Electron_Eta[i]) < eEtaMax
-							&& reader->Electron_IsolationVar[i] < eIsoMax) { //Quality electron
-						electrons.push_back(i);
-					}
-				}
-				if (electrons.size() >= 1) { //Quality electron found
-					h_e_tau_b_b_cutFlow->Fill("Quality e", 1);
-					if (nElectrons == 1 && nMuons == 0) {
-						h_e_tau_b_b_cutFlow->Fill("1 e & 0 #mu", 1);
-						if (getOSTauLeptonPair(reader, &taus, &electrons, &tau_0, &lepton_0, true) == true) { //Quality OS pair found
-							h_e_tau_b_b_cutFlow->Fill("OS", 1);
-							if (selectBJets(reader, &bJets, &bJet_0, &bJet_1) == true) { //Quality b-jet pair selected
-								v_tau_1 = getTauLepton(reader, lepton_0, "electron");
-								v_tau_0 = getTauHadron(reader, tau_0);
-								v_higgs_tt = getHiggs2Taus(reader, v_tau_0, v_tau_1);
-								if (!massCut || (v_higgs_tt.M() >= higgsMassMin && v_higgs_tt.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
-									h_e_tau_b_b_cutFlow->Fill("m_{#tau#tau} Cut", 1);
-									v_bJet_0 = getBJet(reader, bJet_0);
-									v_bJet_1 = getBJet(reader, bJet_1);
-									v_higgs_bb = getHiggs2Bs(v_bJet_0, v_bJet_1);
-									if (!massCut || (v_higgs_bb.M() >= higgsMassMin && v_higgs_bb.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
-										h_e_tau_b_b_cutFlow->Fill("m_{b#bar{b}} Cut", 1);
-										gen_mctMatch = false;
-										if (options["-t"] == "1") {
-											if (!correctDecayChannel(options["-i"], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Checks if event is h->bbtautau
-											gen_mctMatch = truthCut(options["-i"], cEvent, bJet_0, bJet_1, //Checks final-state selection was correct
-													tau_0, lepton_0, hBB, hTauTau, "tau:electron",
-													&mcTruthPlots, &v_gen_higgs_bb, &v_gen_higgs_tt,
-													&v_gen_tau_0, &v_gen_tau_1, &v_gen_bJet_0, &v_gen_bJet_1);
-										}
-										if (options["-t"] == "1" & gen_mctMatch) {
-											h_e_tau_b_b_cutFlow->Fill("MC truth", 1);
-										}
-										if (debug) std::cout << "Accepted e_tau_b_b event\n";
-										v_gen_diHiggs = getDiHiggs(v_gen_higgs_tt, v_gen_higgs_bb);
-										gen_t_0_pT = v_gen_tau_0.Pt();
-										gen_t_0_eta = v_gen_tau_0.Eta();
-										gen_t_0_phi = v_gen_tau_0.Phi();
-										gen_t_0_E = v_gen_tau_0.E();
-										gen_t_1_pT = v_gen_tau_1.Pt();
-										gen_t_1_eta = v_gen_tau_1.Eta();
-										gen_t_1_phi = v_gen_tau_1.Phi();
-										gen_t_1_E = v_gen_tau_1.E();
-										gen_b_0_pT = v_gen_bJet_0.Pt();
-										gen_b_0_eta = v_gen_bJet_0.Eta();
-										gen_b_0_phi = v_gen_bJet_0.Phi();
-										gen_b_0_E = v_gen_bJet_0.E();
-										gen_b_1_pT = v_gen_bJet_1.Pt();
-										gen_b_1_eta = v_gen_bJet_1.Eta();
-										gen_b_1_phi = v_gen_bJet_1.Phi();
-										gen_b_1_E = v_gen_bJet_1.E();
-										gen_diH_pT = v_gen_diHiggs.Pt();
-										gen_diH_eta = v_gen_diHiggs.Eta();
-										gen_diH_phi = v_gen_diHiggs.Phi();
-										gen_diH_E = v_gen_diHiggs.E();
-										gen_diH_mass = v_gen_diHiggs.M();
-										gen_h_bb_pT = v_gen_higgs_bb.Pt();
-										gen_h_bb_eta = v_gen_higgs_bb.Eta();
-										gen_h_bb_phi = v_gen_higgs_bb.Phi();
-										gen_h_bb_E = v_gen_higgs_bb.E();
-										gen_h_tt_pT = v_gen_higgs_tt.Pt();
-										gen_h_tt_eta = v_gen_higgs_tt.Eta();
-										gen_h_tt_phi = v_gen_higgs_tt.Phi();
-										gen_h_tt_E = v_gen_higgs_tt.E();
-										t_0_pT = v_tau_0.Pt();
-										t_0_eta = v_tau_0.Eta();
-										t_0_phi = v_tau_0.Phi();
-										t_0_mass = v_tau_0.M();
-										t_1_pT = v_tau_1.Pt();
-										t_1_eta = v_tau_1.Eta();
-										t_1_phi = v_tau_1.Phi();
-										t_1_mass = eMass;
-										b_0_pT = v_bJet_0.Pt();
-										b_0_eta = v_bJet_0.Eta();
-										b_0_phi = v_bJet_0.Phi();
-										b_0_mass = v_bJet_0.M();
-										b_1_pT = v_bJet_1.Pt();
-										b_1_eta = v_bJet_1.Eta();
-										b_1_phi = v_bJet_1.Phi();
-										b_1_mass = v_bJet_1.M();
-										mPT_pT = reader->MissingET_MET[0];
-										mPT_phi = reader->MissingET_Phi[0];
-										h_tt_pT = v_higgs_tt.Pt();
-										h_tt_eta = v_higgs_tt.Eta();
-										h_tt_phi = v_higgs_tt.Phi();
-										h_tt_mass = v_higgs_tt.M();
-										h_bb_pT = v_higgs_bb.Pt();
-										h_bb_eta = v_higgs_bb.Eta();
-										h_bb_phi = v_higgs_bb.Phi();
-										h_bb_mass = v_higgs_bb.M();
-										diH_pT = v_diHiggs.Pt();
-										diH_eta = v_diHiggs.Eta();
-										diH_phi = v_diHiggs.Phi();
-										diH_mass = v_diHiggs.M();
-										getGlobalEventInfo(options["-i"], cEvent,
-												&hT, &sT, &centrality, &eVis,
-												&nJets, &nBJets, &nTauJets,
-												&minJetPT, &meanJetPT, &maxJetPT,
-												&minJetMass, &meanJetMass, &maxJetMass,
-												&minJetEta, &meanJetEta, &maxJetEta,
-												&sphericityA, &spherocityA,
-												&aplanarityA, &aplanorityA,
-												&upsilonA, &dShapeA);
-										getPrimaryEventShapes(v_tau_0, v_tau_1, v_bJet_0, v_bJet_1,
-												&sphericityP, &spherocityP,
-												&aplanarityP, &aplanorityP,
-												&upsilonP, &dShapeP);
-										weight = (double)*reader->Event_Weight;
-										e_tau_b_b->Fill();
-										h_datasetSizes->Fill("e #tau_{h} b #bar{b}", 1);
-										eventAccepted = true;
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-		//___________________________________
-		if (eventAccepted) continue;
-		//Check for tau tau b b finalstates__
-		h_tau_tau_b_b_cutFlow->Fill("All", 1);
-		electrons.clear();
-		muons.clear();
-		taus.clear();
-		bJets.clear();
-		finalstateSet("tau_tau_b_b");
-		if (debug) std::cout << "Running tau tau b b\n";
-		for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
-			if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
-					&& std::abs(reader->Jet_Eta[i]) < tauEtaMax) { //Quality tau
-				taus.push_back(i);
-			}
-			if (reader->Jet_TauTag[i] == 0 && reader->Jet_BTag[i] == 1 && reader->Jet_PT[i] > bJetPTMin
-					&& std::abs(reader->Jet_Eta[i]) < bJetEtaMax) { //Quality b jet
-				bJets.push_back(i);
-			}
-		}
-		if (taus.size() >= 2) {
-			h_tau_tau_b_b_cutFlow->Fill("Quality #tau#tau", 1);
-			if (bJets.size() >= 2) {//Quality taus  and b jets pairs found
-				h_tau_tau_b_b_cutFlow->Fill("Quality b#bar{b}", 1);
-				if (nElectrons == 0 && nMuons == 0) {
-					h_tau_tau_b_b_cutFlow->Fill("0 e & 0 #mu", 1);
-					if (getOSTauTauPair(reader, &taus, &tau_0, &tau_1) == true) { //Quality OS pair found
-						h_tau_tau_b_b_cutFlow->Fill("OS", 1);
-						if (selectBJets(reader, &bJets, &bJet_0, &bJet_1) == true) { //Quality b-jet pair found
-							v_tau_0 = getTauHadron(reader, tau_0);
-							v_tau_1 = getTauHadron(reader, tau_1);
-							v_higgs_tt = getHiggs2Taus(reader, v_tau_0, v_tau_1);
-							if (!massCut || (v_higgs_tt.M() >= higgsMassMin && v_higgs_tt.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
-								h_tau_tau_b_b_cutFlow->Fill("m_{#tau#tau} Cut", 1);
-								v_bJet_0 = getBJet(reader, bJet_0);
-								v_bJet_1 = getBJet(reader, bJet_1);
-								v_higgs_bb = getHiggs2Bs(v_bJet_0, v_bJet_1);
-								if (!massCut || (v_higgs_bb.M() >= higgsMassMin && v_higgs_bb.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
-									h_tau_tau_b_b_cutFlow->Fill("m_{b#bar{b}} Cut", 1);
-									if (options["-t"] == "1") {
-										if (!correctDecayChannel(options["-i"], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Event is not h->bbtautau
-									}
-									gen_mctMatch = false;
-									if (options["-t"] == "1") {
-										if (!correctDecayChannel(options["-i"], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Checks if event is h->bbtautau
-										gen_mctMatch = truthCut(options["-i"], cEvent, bJet_0, bJet_1, //Checks final-state selection was correct
-												tau_0, tau_1, hBB, hTauTau, "tau:tau",
-												&mcTruthPlots, &v_gen_higgs_bb, &v_gen_higgs_tt,
-												&v_gen_tau_0, &v_gen_tau_1, &v_gen_bJet_0, &v_gen_bJet_1);
-									}
-									if (options["-t"] == "1" & gen_mctMatch) {
-										h_tau_tau_b_b_cutFlow->Fill("MC truth", 1);
-									}
-									if (debug) std::cout << "Accepted tau_tau_b_b event\n";
-									v_gen_diHiggs = getDiHiggs(v_gen_higgs_tt, v_gen_higgs_bb);
-									gen_t_0_pT = v_gen_tau_0.Pt();
-									gen_t_0_eta = v_gen_tau_0.Eta();
-									gen_t_0_phi = v_gen_tau_0.Phi();
-									gen_t_0_E = v_gen_tau_0.E();
-									gen_t_1_pT = v_gen_tau_1.Pt();
-									gen_t_1_eta = v_gen_tau_1.Eta();
-									gen_t_1_phi = v_gen_tau_1.Phi();
-									gen_t_1_E = v_gen_tau_1.E();
-									gen_b_0_pT = v_gen_bJet_0.Pt();
-									gen_b_0_eta = v_gen_bJet_0.Eta();
-									gen_b_0_phi = v_gen_bJet_0.Phi();
-									gen_b_0_E = v_gen_bJet_0.E();
-									gen_b_1_pT = v_gen_bJet_1.Pt();
-									gen_b_1_eta = v_gen_bJet_1.Eta();
-									gen_b_1_phi = v_gen_bJet_1.Phi();
-									gen_b_1_E = v_gen_bJet_1.E();
-									gen_diH_pT = v_gen_diHiggs.Pt();
-									gen_diH_eta = v_gen_diHiggs.Eta();
-									gen_diH_phi = v_gen_diHiggs.Phi();
-									gen_diH_E = v_gen_diHiggs.E();
-									gen_diH_mass = v_gen_diHiggs.M();
-									gen_h_bb_pT = v_gen_higgs_bb.Pt();
-									gen_h_bb_eta = v_gen_higgs_bb.Eta();
-									gen_h_bb_phi = v_gen_higgs_bb.Phi();
-									gen_h_bb_E = v_gen_higgs_bb.E();
-									gen_h_tt_pT = v_gen_higgs_tt.Pt();
-									gen_h_tt_eta = v_gen_higgs_tt.Eta();
-									gen_h_tt_phi = v_gen_higgs_tt.Phi();
-									gen_h_tt_E = v_gen_higgs_tt.E();
-									t_0_pT = v_tau_0.Pt();
-									t_0_eta = v_tau_0.Eta();
-									t_0_phi = v_tau_0.Phi();
-									t_0_mass = v_tau_0.M();
-									t_1_pT = v_tau_1.Pt();
-									t_1_eta = v_tau_1.Eta();
-									t_1_phi = v_tau_1.Phi();
-									t_1_mass = v_tau_1.M();
-									b_0_pT = v_bJet_0.Pt();
-									b_0_eta = v_bJet_0.Eta();
-									b_0_phi = v_bJet_0.Phi();
-									b_0_mass = v_bJet_0.M();
-									b_1_pT = v_bJet_1.Pt();
-									b_1_eta = v_bJet_1.Eta();
-									b_1_phi = v_bJet_1.Phi();
-									b_1_mass = v_bJet_1.M();
-									mPT_pT = reader->MissingET_MET[0];
-									mPT_phi = reader->MissingET_Phi[0];
-									h_tt_pT = v_higgs_tt.Pt();
-									h_tt_eta = v_higgs_tt.Eta();
-									h_tt_phi = v_higgs_tt.Phi();
-									h_tt_mass = v_higgs_tt.M();
-									h_bb_pT = v_higgs_bb.Pt();
-									h_bb_eta = v_higgs_bb.Eta();
-									h_bb_phi = v_higgs_bb.Phi();
-									h_bb_mass = v_higgs_bb.M();
-									diH_pT = v_diHiggs.Pt();
-									diH_eta = v_diHiggs.Eta();
-									diH_phi = v_diHiggs.Phi();
-									diH_mass = v_diHiggs.M();
-									getGlobalEventInfo(options["-i"], cEvent,
-											&hT, &sT, &centrality, &eVis,
-											&nJets, &nBJets, &nTauJets,
-											&minJetPT, &meanJetPT, &maxJetPT,
-											&minJetMass, &meanJetMass, &maxJetMass,
-											&minJetEta, &meanJetEta, &maxJetEta,
-											&sphericityA, &spherocityA,
-											&aplanarityA, &aplanorityA,
-											&upsilonA, &dShapeA);
-									getPrimaryEventShapes(v_tau_0, v_tau_1, v_bJet_0, v_bJet_1,
-											&sphericityP, &spherocityP,
-											&aplanarityP, &aplanorityP,
-											&upsilonP, &dShapeP);
-									weight = (double)*reader->Event_Weight;
-									tau_tau_b_b->Fill();
-									h_datasetSizes->Fill("#tau_{h} #tau_{h} b #bar{b}", 1);
-									eventAccepted = true;
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-		//___________________________________
-		if (eventAccepted) continue;
-		//Check for mu mu b b finalstates______
-		h_mu_mu_b_b_cutFlow->Fill("All", 1);
-		electrons.clear();
-		muons.clear();
-		taus.clear();
-		bJets.clear();
-		finalstateSet("mu_mu_b_b");
+		addMuon = false;
+		addElectron = false;
+		finalstateSet("mu_tau");
+		if (debug) std::cout << "Running mu tau\n";
 		for (int i = 0; i < reader->MuonLoose_size; i++) { //Loop through muons
 			if (reader->MuonLoose_PT[i] > muPTMin && std::abs(reader->MuonLoose_Eta[i]) < muEtaMax
-					&& reader->MuonLoose_IsolationVar[i] < muIsoMax) { //Quality muons
+					&& reader->MuonLoose_IsolationVar[i] < muIsoMax) { //Quality muon
 				muons.push_back(i);
 			}
+		 	else if (reader->MuonLoose_PT[i] > muPTMinAdd && std::abs(reader->MuonLoose_Eta[i]) < muEtaMaxAdd
+					&& reader->MuonLoose_IsolationVar[i] < muIsoMaxAdd) { //Additional muon
+				addMuon = true;
+				break;
+			}
 		}
-		if (muons.size() >= 2) { //Quality di-muon found
-			h_mu_mu_b_b_cutFlow->Fill("Quality di-#mu", 1);
-			if (nMuons == 2 && nElectrons == 0) {
-				h_mu_mu_b_b_cutFlow->Fill("2 #mu & 0 e", 1);
-				if (getOSLeptonLeptonPair(reader, &electrons, &muons, &lepton_0, &lepton_1, "muons") == true) { //Quality OS pair found
-					h_mu_mu_b_b_cutFlow->Fill("OS", 1);
-					for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
-						if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
-								&& std::abs(reader->Jet_Eta[i]) < tauEtaMax) { //Quality tau
-							taus.push_back(i);
-						}
-						if (reader->Jet_TauTag[i] == 0 && reader->Jet_BTag[i] == 1 && reader->Jet_PT[i] > bJetPTMin
-								&& std::abs(reader->Jet_Eta[i]) < bJetEtaMax) { //Quality b jet
-							bJets.push_back(i);
-						}
+		if (muons.size() == 1 && !addMuon) { //One quality muon found and no additional muons
+			h_mu_tau_b_b_cutFlow->Fill("Quality #mu", 1);
+			for (int i = 0; i < reader->Electron_size; i++) { //Loop through electrons
+				if (reader->Electron_PT[i] > ePTMinAdd && std::abs(reader->Electron_Eta[i]) < eEtaMaxAdd
+						&& reader->Electron_IsolationVar[i] < eIsoMaxAdd) { //Additional electron
+					addElectron = true;
+					break;
+				}
+			}
+			if (!addElectron) { //No additional electrons found
+				h_mu_tau_cutFlow->Fill("1 #mu & 0 e", 1);
+				for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
+					if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
+							&& std::abs(reader->Jet_Eta[i]) < tauEtaMax && reader->Jet_Charge[i] != reader->MuonLoose_Charge[muons[0]]) { //Quality OS tau
+						taus.push_back(i);
 					}
-					if (bJets.size() >= 2) {//Quality b jets pairs found
-						if (selectBJets(reader, &bJets, &bJet_0, &bJet_1) == true) { //Quality b-jet pair found
-							h_mu_mu_b_b_cutFlow->Fill("Quality b#bar{b}", 1);
-							if (taus.size() == 0) { //No quality tau
-								h_mu_mu_b_b_cutFlow->Fill("0 #tau_{h}", 1);
-								v_tau_0 = getTauLepton(reader, lepton_0, "muon");
-								v_tau_1 = getTauLepton(reader, lepton_1, "muon");
-								v_higgs_tt = getHiggs2Taus(reader, v_tau_0, v_tau_1);
-								if (!massCut || (v_higgs_tt.M() >= higgsMassMin && v_higgs_tt.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
-									h_mu_mu_b_b_cutFlow->Fill("m_{#tau#tau} Cut", 1);
-									v_bJet_0 = getBJet(reader, bJet_0);
-									v_bJet_1 = getBJet(reader, bJet_1);
-									v_higgs_bb = getHiggs2Bs(v_bJet_0, v_bJet_1);
-									if (!massCut || (v_higgs_bb.M() >= higgsMassMin && v_higgs_bb.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
-										h_mu_mu_b_b_cutFlow->Fill("m_{b#bar{b}} Cut", 1);
-										gen_mctMatch = false;
-										if (options["-t"] == "1") {
-											if (!correctDecayChannel(options["-i"], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Checks if event is h->bbtautau
-											gen_mctMatch = truthCut(options["-i"], cEvent, bJet_0, bJet_1, //Checks final-state selection was correct
-													lepton_0, lepton_1, hBB, hTauTau, "muon:muon",
-													&mcTruthPlots, &v_gen_higgs_bb, &v_gen_higgs_tt,
-													&v_gen_tau_0, &v_gen_tau_1, &v_gen_bJet_0, &v_gen_bJet_1);
-										}
-										if (options["-t"] == "1" & gen_mctMatch) {
-											h_mu_mu_b_b_cutFlow->Fill("MC truth", 1);
-										}
-										if (debug) std::cout << "Accepted mu_mu_b_b event\n";
-										v_gen_diHiggs = getDiHiggs(v_gen_higgs_tt, v_gen_higgs_bb);
-										gen_t_0_pT = v_gen_tau_0.Pt();
-										gen_t_0_eta = v_gen_tau_0.Eta();
-										gen_t_0_phi = v_gen_tau_0.Phi();
-										gen_t_0_E = v_gen_tau_0.E();
-										gen_t_1_pT = v_gen_tau_1.Pt();
-										gen_t_1_eta = v_gen_tau_1.Eta();
-										gen_t_1_phi = v_gen_tau_1.Phi();
-										gen_t_1_E = v_gen_tau_1.E();
-										gen_b_0_pT = v_gen_bJet_0.Pt();
-										gen_b_0_eta = v_gen_bJet_0.Eta();
-										gen_b_0_phi = v_gen_bJet_0.Phi();
-										gen_b_0_E = v_gen_bJet_0.E();
-										gen_b_1_pT = v_gen_bJet_1.Pt();
-										gen_b_1_eta = v_gen_bJet_1.Eta();
-										gen_b_1_phi = v_gen_bJet_1.Phi();
-										gen_b_1_E = v_gen_bJet_1.E();
-										gen_diH_pT = v_gen_diHiggs.Pt();
-										gen_diH_eta = v_gen_diHiggs.Eta();
-										gen_diH_phi = v_gen_diHiggs.Phi();
-										gen_diH_E = v_gen_diHiggs.E();
-										gen_diH_mass = v_gen_diHiggs.M();
-										gen_h_bb_pT = v_gen_higgs_bb.Pt();
-										gen_h_bb_eta = v_gen_higgs_bb.Eta();
-										gen_h_bb_phi = v_gen_higgs_bb.Phi();
-										gen_h_bb_E = v_gen_higgs_bb.E();
-										gen_h_tt_pT = v_gen_higgs_tt.Pt();
-										gen_h_tt_eta = v_gen_higgs_tt.Eta();
-										gen_h_tt_phi = v_gen_higgs_tt.Phi();
-										gen_h_tt_E = v_gen_higgs_tt.E();
-										t_0_pT = v_tau_0.Pt();
-										t_0_eta = v_tau_0.Eta();
-										t_0_phi = v_tau_0.Phi();
-										t_0_mass = muMass;
-										t_1_pT = v_tau_1.Pt();
-										t_1_eta = v_tau_1.Eta();
-										t_1_phi = v_tau_1.Phi();
-										t_1_mass = muMass;
-										b_0_pT = v_bJet_0.Pt();
-										b_0_eta = v_bJet_0.Eta();
-										b_0_phi = v_bJet_0.Phi();
-										b_0_mass = v_bJet_0.M();
-										b_1_pT = v_bJet_1.Pt();
-										b_1_eta = v_bJet_1.Eta();
-										b_1_phi = v_bJet_1.Phi();
-										b_1_mass = v_bJet_1.M();
-										mPT_pT = reader->MissingET_MET[0];
-										mPT_phi = reader->MissingET_Phi[0];
-										h_tt_pT = v_higgs_tt.Pt();
-										h_tt_eta = v_higgs_tt.Eta();
-										h_tt_phi = v_higgs_tt.Phi();
-										h_tt_mass = v_higgs_tt.M();
-										h_bb_pT = v_higgs_bb.Pt();
-										h_bb_eta = v_higgs_bb.Eta();
-										h_bb_phi = v_higgs_bb.Phi();
-										h_bb_mass = v_higgs_bb.M();
-										diH_pT = v_diHiggs.Pt();
-										diH_eta = v_diHiggs.Eta();
-										diH_phi = v_diHiggs.Phi();
-										diH_mass = v_diHiggs.M();
-										getGlobalEventInfo(options["-i"], cEvent,
-												&hT, &sT, &centrality, &eVis,
-												&nJets, &nBJets, &nTauJets,
-												&minJetPT, &meanJetPT, &maxJetPT,
-												&minJetMass, &meanJetMass, &maxJetMass,
-												&minJetEta, &meanJetEta, &maxJetEta,
-												&sphericityA, &spherocityA,
-												&aplanarityA, &aplanorityA,
-												&upsilonA, &dShapeA);
-										getPrimaryEventShapes(v_tau_0, v_tau_1, v_bJet_0, v_bJet_1,
-												&sphericityP, &spherocityP,
-												&aplanarityP, &aplanorityP,
-												&upsilonP, &dShapeP);
-										weight = (double)*reader->Event_Weight;
-										mu_mu_b_b->Fill();
-										h_datasetSizes->Fill("#mu #mu b #bar{b}", 1);
-										eventAccepted = true;
-									}
-								}
-							}
+				}
+				if (taus.size() >= 1) {//Quality tau
+					h_mu_tau_cutFlow->Fill("Quality #tau", 1);
+					v_tau_1 = getTauLepton(reader, muons[0], "muon");
+					v_tau_0 = getTauHadron(reader, taus[0]);
+					v_mPT.SetPtEtaPhiM(reader->MissingET_MET[0], 0.0, reader->MissingET_Phi[0], 0.0);
+					v_higgs_tt = getHiggs2Taus(v_mPT, v_tau_0, v_tau_1);
+					gen_mctMatch = false;
+					if (options["-t"] == "1") {
+						gen_mctMatch = truthCut(options["-i"], cEvent, //Checks final-state selection was correct
+								tau_0, lepton_0, hTauTau, "tau:muon",
+								&mcTruthPlots, &v_gen_higgs_tt,
+								&v_gen_tau_0, &v_gen_tau_1);
+					}
+					if (options["-t"] == "1" & gen_mctMatch) {
+						h_mu_tau_cutFlow->Fill("MC truth", 1);
+					}
+					if (debug) std::cout << "Accepted mu_tau event\n";
+					gen_t_0_pT = v_gen_tau_0.Pt();
+					gen_t_0_eta = v_gen_tau_0.Eta();
+					gen_t_0_phi = v_gen_tau_0.Phi();
+					gen_t_0_E = v_gen_tau_0.E();
+					gen_t_1_pT = v_gen_tau_1.Pt();
+					gen_t_1_eta = v_gen_tau_1.Eta();
+					gen_t_1_phi = v_gen_tau_1.Phi();
+					gen_t_1_E = v_gen_tau_1.E();
+					gen_h_tt_pT = v_gen_higgs_tt.Pt();
+					gen_h_tt_eta = v_gen_higgs_tt.Eta();
+					gen_h_tt_phi = v_gen_higgs_tt.Phi();
+					gen_h_tt_E = v_gen_higgs_tt.E();
+					t_0_pT = v_tau_0.Pt();
+					t_0_eta = v_tau_0.Eta();
+					t_0_phi = v_tau_0.Phi();
+					t_0_mass = v_tau_0.M();
+					t_0_mT = getMT(t_0_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_0, v_MPT));
+					t_1_pT = v_tau_1.Pt();
+					t_1_eta = v_tau_1.Eta();
+					t_1_phi = v_tau_1.Phi();
+					t_1_mass = muMass;
+					t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, v_MPT));
+					mPT_pT = reader->MissingET_MET[0];
+					mPT_phi = reader->MissingET_Phi[0];
+					h_tt_pT = v_higgs_tt.Pt();
+					h_tt_eta = v_higgs_tt.Eta();
+					h_tt_phi = v_higgs_tt.Phi();
+					h_tt_mass = v_higgs_tt.M();
+					weight = (double)*reader->Event_Weight;
+					mu_tau->Fill();
+					h_datasetSizes->Fill("#mu #tau_{h}", 1);
+					eventAccepted = true;
+				}
+			}
+		}
+		//___________________________________
+		if (eventAccepted) continue;
+		//Check for e tau finalstates___
+		h_e_tau_cutFlow->Fill("All", 1);
+		electrons.clear();
+		muons.clear();
+		taus.clear();
+		addMuon = false;
+		addElectron = false;
+		finalstateSet("e_tau");
+		if (debug) std::cout << "Running e tau\n";
+		for (int i = 0; i < reader->Electron_size; i++) { //Loop through electrons
+			if (reader->Electron_PT[i] > ePTMin && std::abs(reader->Electron_Eta[i]) < eEtaMax
+					&& reader->Electron_IsolationVar[i] < eIsoMax) { //Quality electron
+				electrons.push_back(i);
+			}
+		 	else if (reader->Electron_PT[i] > ePTMinAdd && std::abs(reader->Electron_Eta[i]) < eEtaMaxAdd
+					&& reader->Electron_IsolationVar[i] < eIsoMaxAdd) { //Additional electon
+				addElectron = true;
+				break;
+			}
+		}
+		if (electrons.size() == 1 && !addElectron) { //One quality electon found and no additional electons
+			h_e_tau_cutFlow->Fill("Quality e", 1);
+			for (int i = 0; i < reader->MuonLoose_size; i++) { //Loop through muons
+				if (reader->MuonLoose_PT[i] > muPTMinAdd && std::abs(reader->MuonLoose_Eta[i]) < muEtaMaxAdd
+						&& reader->MuonLoose_IsolationVar[i] < muIsoMaxAdd) { //Additional muons
+					addMuon = true;
+					break;
+				}
+			}
+			if (!addMuon) { //No additional muons found
+				h_e_tau_cutFlow->Fill("1 e & 0 #mu", 1);
+				for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
+					if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
+							&& std::abs(reader->Jet_Eta[i]) < tauEtaMax && reader->Jet_Charge[i] != reader->Electrons_Charge[electrons[0]]) { //Quality OS tau
+						taus.push_back(i);
+					}
+				}
+				if (taus.size() >= 1) {//Quality tau
+					h_e_tau_cutFlow->Fill("Quality #tau", 1);
+					v_tau_1 = getTauLepton(reader, electrons[0], "electron");
+					v_tau_0 = getTauHadron(reader, taus[0]);
+					v_mPT.SetPtEtaPhiM(reader->MissingET_MET[0], 0.0, reader->MissingET_Phi[0], 0.0);
+					v_higgs_tt = getHiggs2Taus(v_mPT, v_tau_0, v_tau_1);
+					gen_mctMatch = false;
+					if (options["-t"] == "1") {
+						gen_mctMatch = truthCut(options["-i"], cEvent, //Checks final-state selection was correct
+								tau_0, lepton_0, hTauTau, "tau:electron",
+								&mcTruthPlots, &v_gen_higgs_tt,
+								&v_gen_tau_0, &v_gen_tau_1);
+					}
+					if (options["-t"] == "1" & gen_mctMatch) {
+						h_e_tau_cutFlow->Fill("MC truth", 1);
+					}
+					if (debug) std::cout << "Accepted e_tau event\n";
+					gen_t_0_pT = v_gen_tau_0.Pt();
+					gen_t_0_eta = v_gen_tau_0.Eta();
+					gen_t_0_phi = v_gen_tau_0.Phi();
+					gen_t_0_E = v_gen_tau_0.E();
+					gen_t_1_pT = v_gen_tau_1.Pt();
+					gen_t_1_eta = v_gen_tau_1.Eta();
+					gen_t_1_phi = v_gen_tau_1.Phi();
+					gen_t_1_E = v_gen_tau_1.E();
+					gen_h_tt_pT = v_gen_higgs_tt.Pt();
+					gen_h_tt_eta = v_gen_higgs_tt.Eta();
+					gen_h_tt_phi = v_gen_higgs_tt.Phi();
+					gen_h_tt_E = v_gen_higgs_tt.E();
+					t_0_pT = v_tau_0.Pt();
+					t_0_eta = v_tau_0.Eta();
+					t_0_phi = v_tau_0.Phi();
+					t_0_mass = v_tau_0.M();
+					t_0_mT = getMT(t_0_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_0, v_MPT));
+					t_1_pT = v_tau_1.Pt();
+					t_1_eta = v_tau_1.Eta();
+					t_1_phi = v_tau_1.Phi();
+					t_1_mass = eMass;
+					t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, v_MPT));
+					mPT_pT = reader->MissingET_MET[0];
+					mPT_phi = reader->MissingET_Phi[0];
+					h_tt_pT = v_higgs_tt.Pt();
+					h_tt_eta = v_higgs_tt.Eta();
+					h_tt_phi = v_higgs_tt.Phi();
+					h_tt_mass = v_higgs_tt.M();
+					weight = (double)*reader->Event_Weight;
+					e_tau->Fill();
+					h_datasetSizes->Fill("e #tau_{h}", 1);
+					eventAccepted = true;
+				}
+			}
+		}
+		//___________________________________
+		if (eventAccepted) continue;
+		//Check for tau tau finalstates___
+		h_tau_tau_cutFlow->Fill("All", 1);
+		electrons.clear();
+		muons.clear();
+		taus.clear();
+		addMuon = false;
+		addElectron = false;
+		finalstateSet("tau_tau");
+		if (debug) std::cout << "Running tau tau\n";
+		for (int i = 0; i < reader->Electron_size; i++) { //Loop through electrons
+			if (reader->Electron_PT[i] > ePTMinAdd && std::abs(reader->Electron_Eta[i]) < eEtaMaxAdd
+					&& reader->Electron_IsolationVar[i] < eIsoMaxAdd) { //Additional electon
+				addElectron = true;
+				break;
+			}
+		}
+		if (!addElectron) { //No additional electons
+			for (int i = 0; i < reader->MuonLoose_size; i++) { //Loop through muons
+				if (reader->MuonLoose_PT[i] > muPTMinAdd && std::abs(reader->MuonLoose_Eta[i]) < muEtaMaxAdd
+						&& reader->MuonLoose_IsolationVar[i] < muIsoMaxAdd) { //Additional muons
+					addMuon = true;
+					break;
+				}
+			}
+			if (!addMuon) { //No additional muons found
+				h_tau_tau_cutFlow->Fill("0 e & 0 #mu", 1);
+				for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
+					if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
+							&& std::abs(reader->Jet_Eta[i]) < tauEtaMax) { //Quality tau
+						taus.push_back(i);
+					}
+				}
+				if (taus.size() >= 2) {//Quality tau pair
+					h_tau_tau_cutFlow->Fill("Quality #tau#tau", 1);
+					if (getOSTauTauPair(branchJet, &taus, &tau_0, &tau_1)) { //OS Tau pair
+						h_tau_tau_cutFlow->Fill("OS", 1);
+						v_tau_1 = etTauHadron(reader, tau_1);
+						v_tau_0 = getTauHadron(reader, tau_0);
+						v_mPT.SetPtEtaPhiM(reader->MissingET_MET[0], 0.0, reader->MissingET_Phi[0], 0.0);
+						v_higgs_tt = getHiggs2Taus(v_mPT, v_tau_0, v_tau_1);
+						gen_mctMatch = false;
+						if (options["-t"] == "1") {
+							gen_mctMatch = truthCut(options["-i"], cEvent, //Checks final-state selection was correct
+									tau_0, lepton_0, hTauTau, "tau:tau",
+									&mcTruthPlots, &v_gen_higgs_tt,
+									&v_gen_tau_0, &v_gen_tau_1);
 						}
+						if (options["-t"] == "1" & gen_mctMatch) {
+							h_tau_tau_cutFlow->Fill("MC truth", 1);
+						}
+						if (debug) std::cout << "Accepted tau_tau event\n";
+						gen_t_0_pT = v_gen_tau_0.Pt();
+						gen_t_0_eta = v_gen_tau_0.Eta();
+						gen_t_0_phi = v_gen_tau_0.Phi();
+						gen_t_0_E = v_gen_tau_0.E();
+						gen_t_1_pT = v_gen_tau_1.Pt();
+						gen_t_1_eta = v_gen_tau_1.Eta();
+						gen_t_1_phi = v_gen_tau_1.Phi();
+						gen_t_1_E = v_gen_tau_1.E();
+						gen_h_tt_pT = v_gen_higgs_tt.Pt();
+						gen_h_tt_eta = v_gen_higgs_tt.Eta();
+						gen_h_tt_phi = v_gen_higgs_tt.Phi();
+						gen_h_tt_E = v_gen_higgs_tt.E();
+						t_0_pT = v_tau_0.Pt();
+						t_0_eta = v_tau_0.Eta();
+						t_0_phi = v_tau_0.Phi();
+						t_0_mass = v_tau_0.M();
+						t_0_mT = getMT(t_0_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_0, v_MPT));
+						t_1_pT = v_tau_1.Pt();
+						t_1_eta = v_tau_1.Eta();
+						t_1_phi = v_tau_1.Phi();
+						t_1_mass = v_tau_1.M();
+						t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, v_MPT));
+						mPT_pT = reader->MissingET_MET[0];
+						mPT_phi = reader->MissingET_Phi[0];
+						h_tt_pT = v_higgs_tt.Pt();
+						h_tt_eta = v_higgs_tt.Eta();
+						h_tt_phi = v_higgs_tt.Phi();
+						h_tt_mass = v_higgs_tt.M();
+						weight = (double)*reader->Event_Weight;
+						tau_tau->Fill();
+						h_datasetSizes->Fill("#tau_{h} #tau_{h}", 1);
+						eventAccepted = true;
 					}
 				}
 			}
 		}
 		//___________________________________
 		if (eventAccepted) continue;
-		//Check for e mu b b finalstates______
-		h_e_mu_b_b_cutFlow->Fill("All", 1);
+		//Check for mu mu finalstates___
+		h_mu_mu_cutFlow->Fill("All", 1);
 		electrons.clear();
 		muons.clear();
 		taus.clear();
-		bJets.clear();
-		finalstateSet("e_mu_b_b");
+		addMuon = false;
+		addElectron = false;
+		finalstateSet("mu_mu");
+		if (debug) std::cout << "Running mu mu\n";
 		for (int i = 0; i < reader->MuonLoose_size; i++) { //Loop through muons
 			if (reader->MuonLoose_PT[i] > muPTMin && std::abs(reader->MuonLoose_Eta[i]) < muEtaMax
-					&& reader->MuonLoose_IsolationVar[i] < muIsoMax) { //Quality muons
+					&& reader->MuonLoose_IsolationVar[i] < muIsoMax) { //Quality muon
 				muons.push_back(i);
 			}
-		}
-		for (int i = 0; i < reader->Electron_size; i++) { //Loop through electrons
-			if (reader->Electron_PT[i] > muPTMin && std::abs(reader->Electron_Eta[i]) < muEtaMax
-					&& reader->Electron_IsolationVar[i] < muIsoMax) { //Quality electrons
-				electrons.push_back(i);
+		 	else if (reader->MuonLoose_PT[i] > muPTMinAdd && std::abs(reader->MuonLoose_Eta[i]) < muEtaMaxAdd
+					&& reader->MuonLoose_IsolationVar[i] < muIsoMaxAdd) { //Additional muon
+				addMuon = true;
+				break;
 			}
 		}
-		if (muons.size() >= 1 && electrons.size() >= 1) { //Quality muon and electron found
-			h_e_mu_b_b_cutFlow->Fill("Quality e and #mu", 1);
-			if (nMuons == 1 && nElectrons == 1) {
-				h_e_mu_b_b_cutFlow->Fill("1 e & 1 #mu", 1);
-				if (getOSLeptonLeptonPair(reader, &electrons, &muons, &lepton_0, &lepton_1, "mixed") == true) { //Quality OS pair found
-					h_e_mu_b_b_cutFlow->Fill("OS", 1);
-					for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
-						if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
-								&& std::abs(reader->Jet_Eta[i]) < tauEtaMax) { //Quality tau
-							taus.push_back(i);
-						}
-						if (reader->Jet_TauTag[i] == 0 && reader->Jet_BTag[i] == 1 && reader->Jet_PT[i] > bJetPTMin
-								&& std::abs(reader->Jet_Eta[i]) < bJetEtaMax) { //Quality b jet
-							bJets.push_back(i);
-						}
+		if (muons.size() == 2 && !addMuon && 
+			reader->MuonLoose_Charge[muons[0]] != reader->MuonLoose_Charge[muons[1]]) { //One quality OS muon pair found and no additional muons
+			h_mu_mu_cutFlow->Fill("Quality #mu#mu", 1);
+			for (int i = 0; i < reader->Electron_size; i++) { //Loop through electrons
+				if (reader->Electron_PT[i] > ePTMinAdd && std::abs(reader->Electron_Eta[i]) < eEtaMaxAdd
+						&& reader->Electron_IsolationVar[i] < eIsoMaxAdd) { //Additional electron
+					addElectron = true;
+					break;
+				}
+			}
+			if (!addElectron) { //No additional electrons found
+				h_mu_mu_cutFlow->Fill("2 #mu & 0 e", 1);
+				for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
+					if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
+							&& std::abs(reader->Jet_Eta[i]) < tauEtaMax) { //Quality tau
+						taus.push_back(i);
+						break
 					}
-					if (bJets.size() >= 2) {//Quality b jets pairs found
-						if (selectBJets(reader, &bJets, &bJet_0, &bJet_1) == true) { //Quality b-jet pair found
-							h_e_mu_b_b_cutFlow->Fill("Quality b#bar{b}", 1);
-							if (taus.size() == 0) { //No quality tau
-								h_e_mu_b_b_cutFlow->Fill("0 #tau_{h}", 1);
-								v_tau_0 = getTauLepton(reader, lepton_0, "muon");
-								v_tau_1 = getTauLepton(reader, lepton_1, "electron");
-								v_higgs_tt = getHiggs2Taus(reader, v_tau_0, v_tau_1);
-								if (!massCut || (v_higgs_tt.M() >= higgsMassMin && v_higgs_tt.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
-									h_e_mu_b_b_cutFlow->Fill("m_{#tau#tau} Cut", 1);
-									v_bJet_0 = getBJet(reader, bJet_0);
-									v_bJet_1 = getBJet(reader, bJet_1);
-									v_higgs_bb = getHiggs2Bs(v_bJet_0, v_bJet_1);
-									if (!massCut || (v_higgs_bb.M() >= higgsMassMin && v_higgs_bb.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
-										h_e_mu_b_b_cutFlow->Fill("m_{b#bar{b}} Cut", 1);
-										gen_mctMatch = false;
-										if (options["-t"] == "1") {
-											if (!correctDecayChannel(options["-i"], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Checks if event is h->bbtautau
-											gen_mctMatch = truthCut(options["-i"], cEvent, bJet_0, bJet_1, //Checks final-state selection was correct
-													lepton_0, lepton_1, hBB, hTauTau, "muon:electron",
-													&mcTruthPlots, &v_gen_higgs_bb, &v_gen_higgs_tt,
-													&v_gen_tau_0, &v_gen_tau_1, &v_gen_bJet_0, &v_gen_bJet_1);
-										}
-										if (options["-t"] == "1" & gen_mctMatch) {
-											h_e_mu_b_b_cutFlow->Fill("MC truth", 1);
-										}
-										if (debug) std::cout << "Accepted e_mu_b_b event\n";
-										v_gen_diHiggs = getDiHiggs(v_gen_higgs_tt, v_gen_higgs_bb);
-										gen_t_0_pT = v_gen_tau_0.Pt();
-										gen_t_0_eta = v_gen_tau_0.Eta();
-										gen_t_0_phi = v_gen_tau_0.Phi();
-										gen_t_0_E = v_gen_tau_0.E();
-										gen_t_1_pT = v_gen_tau_1.Pt();
-										gen_t_1_eta = v_gen_tau_1.Eta();
-										gen_t_1_phi = v_gen_tau_1.Phi();
-										gen_t_1_E = v_gen_tau_1.E();
-										gen_b_0_pT = v_gen_bJet_0.Pt();
-										gen_b_0_eta = v_gen_bJet_0.Eta();
-										gen_b_0_phi = v_gen_bJet_0.Phi();
-										gen_b_0_E = v_gen_bJet_0.E();
-										gen_b_1_pT = v_gen_bJet_1.Pt();
-										gen_b_1_eta = v_gen_bJet_1.Eta();
-										gen_b_1_phi = v_gen_bJet_1.Phi();
-										gen_b_1_E = v_gen_bJet_1.E();
-										gen_diH_pT = v_gen_diHiggs.Pt();
-										gen_diH_eta = v_gen_diHiggs.Eta();
-										gen_diH_phi = v_gen_diHiggs.Phi();
-										gen_diH_E = v_gen_diHiggs.E();
-										gen_diH_mass = v_gen_diHiggs.M();
-										gen_h_bb_pT = v_gen_higgs_bb.Pt();
-										gen_h_bb_eta = v_gen_higgs_bb.Eta();
-										gen_h_bb_phi = v_gen_higgs_bb.Phi();
-										gen_h_bb_E = v_gen_higgs_bb.E();
-										gen_h_tt_pT = v_gen_higgs_tt.Pt();
-										gen_h_tt_eta = v_gen_higgs_tt.Eta();
-										gen_h_tt_phi = v_gen_higgs_tt.Phi();
-										gen_h_tt_E = v_gen_higgs_tt.E();
-										t_0_pT = v_tau_0.Pt();
-										t_0_eta = v_tau_0.Eta();
-										t_0_phi = v_tau_0.Phi();
-										t_0_mass = muMass;
-										t_1_pT = v_tau_1.Pt();
-										t_1_eta = v_tau_1.Eta();
-										t_1_phi = v_tau_1.Phi();
-										t_1_mass = eMass;
-										b_0_pT = v_bJet_0.Pt();
-										b_0_eta = v_bJet_0.Eta();
-										b_0_phi = v_bJet_0.Phi();
-										b_0_mass = v_bJet_0.M();
-										b_1_pT = v_bJet_1.Pt();
-										b_1_eta = v_bJet_1.Eta();
-										b_1_phi = v_bJet_1.Phi();
-										b_1_mass = v_bJet_1.M();
-										mPT_pT = reader->MissingET_MET[0];
-										mPT_phi = reader->MissingET_Phi[0];
-										h_tt_pT = v_higgs_tt.Pt();
-										h_tt_eta = v_higgs_tt.Eta();
-										h_tt_phi = v_higgs_tt.Phi();
-										h_tt_mass = v_higgs_tt.M();
-										h_bb_pT = v_higgs_bb.Pt();
-										h_bb_eta = v_higgs_bb.Eta();
-										h_bb_phi = v_higgs_bb.Phi();
-										h_bb_mass = v_higgs_bb.M();
-										diH_pT = v_diHiggs.Pt();
-										diH_eta = v_diHiggs.Eta();
-										diH_phi = v_diHiggs.Phi();
-										diH_mass = v_diHiggs.M();
-										getGlobalEventInfo(options["-i"], cEvent,
-												&hT, &sT, &centrality, &eVis,
-												&nJets, &nBJets, &nTauJets,
-												&minJetPT, &meanJetPT, &maxJetPT,
-												&minJetMass, &meanJetMass, &maxJetMass,
-												&minJetEta, &meanJetEta, &maxJetEta,
-												&sphericityA, &spherocityA,
-												&aplanarityA, &aplanorityA,
-												&upsilonA, &dShapeA);
-										getPrimaryEventShapes(v_tau_0, v_tau_1, v_bJet_0, v_bJet_1,
-												&sphericityP, &spherocityP,
-												&aplanarityP, &aplanorityP,
-												&upsilonP, &dShapeP);
-										weight = (double)*reader->Event_Weight;
-										e_mu_b_b->Fill();
-										h_datasetSizes->Fill("e #mu b #bar{b}", 1);
-										eventAccepted = true;
-									}
-								}
-							}
-						}
+				}
+				if (taus.size() == 0) {//No taus
+					h_mu_mu_cutFlow->Fill("0 #tau", 1);
+					v_tau_1 = getTauLepton(reader, muons[0], "muon");
+					v_tau_0 = getTauLepton(reader, muons[0], "muon");
+					v_mPT.SetPtEtaPhiM(reader->MissingET_MET[0], 0.0, reader->MissingET_Phi[0], 0.0);
+					v_higgs_tt = getHiggs2Taus(v_mPT, v_tau_0, v_tau_1);
+					gen_mctMatch = false;
+					if (options["-t"] == "1") {
+						gen_mctMatch = truthCut(options["-i"], cEvent, //Checks final-state selection was correct
+								tau_0, lepton_0, hTauTau, "muon:muon",
+								&mcTruthPlots, &v_gen_higgs_tt,
+								&v_gen_tau_0, &v_gen_tau_1);
 					}
+					if (options["-t"] == "1" & gen_mctMatch) {
+						h_mu_mu_cutFlow->Fill("MC truth", 1);
+					}
+					if (debug) std::cout << "Accepted mu_mu event\n";
+					gen_t_0_pT = v_gen_tau_0.Pt();
+					gen_t_0_eta = v_gen_tau_0.Eta();
+					gen_t_0_phi = v_gen_tau_0.Phi();
+					gen_t_0_E = v_gen_tau_0.E();
+					gen_t_1_pT = v_gen_tau_1.Pt();
+					gen_t_1_eta = v_gen_tau_1.Eta();
+					gen_t_1_phi = v_gen_tau_1.Phi();
+					gen_t_1_E = v_gen_tau_1.E();
+					gen_h_tt_pT = v_gen_higgs_tt.Pt();
+					gen_h_tt_eta = v_gen_higgs_tt.Eta();
+					gen_h_tt_phi = v_gen_higgs_tt.Phi();
+					gen_h_tt_E = v_gen_higgs_tt.E();
+					t_0_pT = v_tau_0.Pt();
+					t_0_eta = v_tau_0.Eta();
+					t_0_phi = v_tau_0.Phi();
+					t_0_mass = muMass;
+					t_0_mT = getMT(t_0_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_0, v_MPT));
+					t_1_pT = v_tau_1.Pt();
+					t_1_eta = v_tau_1.Eta();
+					t_1_phi = v_tau_1.Phi();
+					t_1_mass = muMass;
+					t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, v_MPT));
+					mPT_pT = reader->MissingET_MET[0];
+					mPT_phi = reader->MissingET_Phi[0];
+					h_tt_pT = v_higgs_tt.Pt();
+					h_tt_eta = v_higgs_tt.Eta();
+					h_tt_phi = v_higgs_tt.Phi();
+					h_tt_mass = v_higgs_tt.M();
+					weight = (double)*reader->Event_Weight;
+					mu_mu->Fill();
+					h_datasetSizes->Fill("#mu #mu", 1);
+					eventAccepted = true;
 				}
 			}
 		}
 		//___________________________________
 		if (eventAccepted) continue;
-		//Check for e e b b finalstates______
-		h_e_e_b_b_cutFlow->Fill("All", 1);
+		//Check for e mu finalstates___
+		h_e_mu_cutFlow->Fill("All", 1);
 		electrons.clear();
 		muons.clear();
 		taus.clear();
-		bJets.clear();
-		finalstateSet("e_W_b_b");
-		for (int i = 0; i < reader->Electron_size; i++) { //Loop through electrons
-			if (reader->Electron_PT[i] > muPTMin && std::abs(reader->Electron_Eta[i]) < muEtaMax
-					&& reader->Electron_IsolationVar[i] < muIsoMax) { //Quality electrons
-				electrons.push_back(i);
+		addMuon = false;
+		addElectron = false;
+		finalstateSet("e_mu");
+		if (debug) std::cout << "Running e mu\n";
+		for (int i = 0; i < reader->MuonLoose_size; i++) { //Loop through muons
+			if (reader->MuonLoose_PT[i] > muPTMin && std::abs(reader->MuonLoose_Eta[i]) < muEtaMax
+					&& reader->MuonLoose_IsolationVar[i] < muIsoMax) { //Quality muon
+				muons.push_back(i);
+			}
+		 	else if (reader->MuonLoose_PT[i] > muPTMinAdd && std::abs(reader->MuonLoose_Eta[i]) < muEtaMaxAdd
+					&& reader->MuonLoose_IsolationVar[i] < muIsoMaxAdd) { //Additional muon
+				addMuon = true;
+				break;
 			}
 		}
-		if (electrons.size() >= 2) { //Quality di-electron found
-			h_e_e_b_b_cutFlow->Fill("Quality di-e", 1);
-			if (nMuons == 0 && nElectrons == 2) {
-				h_e_e_b_b_cutFlow->Fill("2 e & 0 #mu", 1);
-				if (getOSLeptonLeptonPair(reader, &electrons, &muons, &lepton_0, &lepton_1, "electrons") == true) { //Quality OS pair found
-					h_e_e_b_b_cutFlow->Fill("OS", 1);
-					for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
-						if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
-								&& std::abs(reader->Jet_Eta[i]) < tauEtaMax) { //Quality tau
-							taus.push_back(i);
-						}
-						if (reader->Jet_TauTag[i] == 0 && reader->Jet_BTag[i] == 1 && reader->Jet_PT[i] > bJetPTMin
-								&& std::abs(reader->Jet_Eta[i]) < bJetEtaMax) { //Quality b jet
-							bJets.push_back(i);
-						}
-					}
-					if (bJets.size() >= 2) {//Quality b jets pairs found
-						if (selectBJets(reader, &bJets, &bJet_0, &bJet_1) == true) { //Quality b-jet pair found
-							h_e_e_b_b_cutFlow->Fill("Quality b#bar{b}", 1);
-							if (taus.size() == 0) { //No quality tau
-								h_e_e_b_b_cutFlow->Fill("0 #tau_{h}", 1);
-								v_tau_0 = getTauLepton(reader, lepton_0, "electron");
-								v_tau_1 = getTauLepton(reader, lepton_1, "electron");
-								v_higgs_tt = getHiggs2Taus(reader, v_tau_0, v_tau_1);
-								if (!massCut || (v_higgs_tt.M() >= higgsMassMin && v_higgs_tt.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
-									h_e_e_b_b_cutFlow->Fill("m_{#tau#tau} Cut", 1);
-									v_bJet_0 = getBJet(reader, bJet_0);
-									v_bJet_1 = getBJet(reader, bJet_1);
-									v_higgs_bb = getHiggs2Bs(v_bJet_0, v_bJet_1);
-									if (!massCut || (v_higgs_bb.M() >= higgsMassMin && v_higgs_bb.M() <= higgsMassMax)) { //Reconstructed Higgs pass mass window cut
-										h_e_e_b_b_cutFlow->Fill("m_{b#bar{b}} Cut", 1);
-										gen_mctMatch = false;
-										if (options["-t"] == "1") {
-											if (!correctDecayChannel(options["-i"], cEvent, &mcTruthPlots, &hBB, &hTauTau)) continue; //Checks if event is h->bbtautau
-											gen_mctMatch = truthCut(options["-i"], cEvent, bJet_0, bJet_1, //Checks final-state selection was correct
-													lepton_0, lepton_1, hBB, hTauTau, "electron:electron",
-													&mcTruthPlots, &v_gen_higgs_bb, &v_gen_higgs_tt,
-													&v_gen_tau_0, &v_gen_tau_1, &v_gen_bJet_0, &v_gen_bJet_1);
-										}
-										if (options["-t"] == "1" & gen_mctMatch) {
-											h_e_e_b_b_cutFlow->Fill("MC truth", 1);
-										}
-										if (debug) std::cout << "Accepted e_e_b_b event\n";
-										v_gen_diHiggs = getDiHiggs(v_gen_higgs_tt, v_gen_higgs_bb);
-										gen_t_0_pT = v_gen_tau_0.Pt();
-										gen_t_0_eta = v_gen_tau_0.Eta();
-										gen_t_0_phi = v_gen_tau_0.Phi();
-										gen_t_0_E = v_gen_tau_0.E();
-										gen_t_1_pT = v_gen_tau_1.Pt();
-										gen_t_1_eta = v_gen_tau_1.Eta();
-										gen_t_1_phi = v_gen_tau_1.Phi();
-										gen_t_1_E = v_gen_tau_1.E();
-										gen_b_0_pT = v_gen_bJet_0.Pt();
-										gen_b_0_eta = v_gen_bJet_0.Eta();
-										gen_b_0_phi = v_gen_bJet_0.Phi();
-										gen_b_0_E = v_gen_bJet_0.E();
-										gen_b_1_pT = v_gen_bJet_1.Pt();
-										gen_b_1_eta = v_gen_bJet_1.Eta();
-										gen_b_1_phi = v_gen_bJet_1.Phi();
-										gen_b_1_E = v_gen_bJet_1.E();
-										gen_diH_pT = v_gen_diHiggs.Pt();
-										gen_diH_eta = v_gen_diHiggs.Eta();
-										gen_diH_phi = v_gen_diHiggs.Phi();
-										gen_diH_E = v_gen_diHiggs.E();
-										gen_diH_mass = v_gen_diHiggs.M();
-										gen_h_bb_pT = v_gen_higgs_bb.Pt();
-										gen_h_bb_eta = v_gen_higgs_bb.Eta();
-										gen_h_bb_phi = v_gen_higgs_bb.Phi();
-										gen_h_bb_E = v_gen_higgs_bb.E();
-										gen_h_tt_pT = v_gen_higgs_tt.Pt();
-										gen_h_tt_eta = v_gen_higgs_tt.Eta();
-										gen_h_tt_phi = v_gen_higgs_tt.Phi();
-										gen_h_tt_E = v_gen_higgs_tt.E();
-										t_0_pT = v_tau_0.Pt();
-										t_0_eta = v_tau_0.Eta();
-										t_0_phi = v_tau_0.Phi();
-										t_0_mass = eMass;
-										t_1_pT = v_tau_1.Pt();
-										t_1_eta = v_tau_1.Eta();
-										t_1_phi = v_tau_1.Phi();
-										t_1_mass = eMass;
-										b_0_pT = v_bJet_0.Pt();
-										b_0_eta = v_bJet_0.Eta();
-										b_0_phi = v_bJet_0.Phi();
-										b_0_mass = v_bJet_0.M();
-										b_1_pT = v_bJet_1.Pt();
-										b_1_eta = v_bJet_1.Eta();
-										b_1_phi = v_bJet_1.Phi();
-										b_1_mass = v_bJet_1.M();
-										mPT_pT = reader->MissingET_MET[0];
-										mPT_phi = reader->MissingET_Phi[0];
-										h_tt_pT = v_higgs_tt.Pt();
-										h_tt_eta = v_higgs_tt.Eta();
-										h_tt_phi = v_higgs_tt.Phi();
-										h_tt_mass = v_higgs_tt.M();
-										h_bb_pT = v_higgs_bb.Pt();
-										h_bb_eta = v_higgs_bb.Eta();
-										h_bb_phi = v_higgs_bb.Phi();
-										h_bb_mass = v_higgs_bb.M();
-										diH_pT = v_diHiggs.Pt();
-										diH_eta = v_diHiggs.Eta();
-										diH_phi = v_diHiggs.Phi();
-										diH_mass = v_diHiggs.M();
-										getGlobalEventInfo(options["-i"], cEvent,
-												&hT, &sT, &centrality, &eVis,
-												&nJets, &nBJets, &nTauJets,
-												&minJetPT, &meanJetPT, &maxJetPT,
-												&minJetMass, &meanJetMass, &maxJetMass,
-												&minJetEta, &meanJetEta, &maxJetEta,
-												&sphericityA, &spherocityA,
-												&aplanarityA, &aplanorityA,
-												&upsilonA, &dShapeA);
-										getPrimaryEventShapes(v_tau_0, v_tau_1, v_bJet_0, v_bJet_1,
-												&sphericityP, &spherocityP,
-												&aplanarityP, &aplanorityP,
-												&upsilonP, &dShapeP);
-										weight = (double)*reader->Event_Weight;
-										e_e_b_b->Fill();
-										h_datasetSizes->Fill("e e b #bar{b}", 1);
-										eventAccepted = true;
-									}
-								}
-							}
-						}
-					}
+		if (muons.size() == 1 && !addMuon) { //One quality muon found and no additional muons
+			h_e_mu_cutFlow->Fill("Quality #mu", 1);
+			for (int i = 0; i < reader->Electron_size; i++) { //Loop through electrons
+				if (reader->Electron_PT[i] > ePTMin && std::abs(reader->Electron_Eta[i]) < eEtaMax
+						&& reader->Electron_IsolationVar[i] < eIsoMax
+						&& reader->Electron_Charge != reader->MuonLoose_Charge[muons[0]]) { //Quality OS electron
+					electrons.push_back(i);
+				}
+			 	else if (reader->Electron_PT[i] > ePTMinAdd && std::abs(reader->Electron_Eta[i]) < eEtaMaxAdd
+						&& reader->Electron_IsolationVar[i] < eIsoMaxAdd) { //Additional electon
+					addElectron = true;
+					break;
 				}
 			}
-		//___________________________________
+			if (electons.size() == 1 && !addElectron) { //No additional electrons found
+				h_e_mu_cutFlow->Fill("1 #mu & 1 e", 1);
+				for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
+					if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
+							&& std::abs(reader->Jet_Eta[i]) < tauEtaMax) { //Quality tau
+						taus.push_back(i);
+						break
+					}
+				}
+				if (taus.size() == 0) {//No taus
+					h_e_mu_cutFlow->Fill("0 #tau", 1);
+					v_tau_1 = getTauLepton(reader, electrons[0], "electron");
+					v_tau_0 = getTauLepton(reader, muons[0], "muon");
+					v_mPT.SetPtEtaPhiM(reader->MissingET_MET[0], 0.0, reader->MissingET_Phi[0], 0.0);
+					v_higgs_tt = getHiggs2Taus(v_mPT, v_tau_0, v_tau_1);
+					gen_mctMatch = false;
+					if (options["-t"] == "1") {
+						gen_mctMatch = truthCut(options["-i"], cEvent, //Checks final-state selection was correct
+								tau_0, lepton_0, hTauTau, "muon:electron",
+								&mcTruthPlots, &v_gen_higgs_tt,
+								&v_gen_tau_0, &v_gen_tau_1);
+					}
+					if (options["-t"] == "1" & gen_mctMatch) {
+						h_e_mu_cutFlow->Fill("MC truth", 1);
+					}
+					if (debug) std::cout << "Accepted e_mu event\n";
+					gen_t_0_pT = v_gen_tau_0.Pt();
+					gen_t_0_eta = v_gen_tau_0.Eta();
+					gen_t_0_phi = v_gen_tau_0.Phi();
+					gen_t_0_E = v_gen_tau_0.E();
+					gen_t_1_pT = v_gen_tau_1.Pt();
+					gen_t_1_eta = v_gen_tau_1.Eta();
+					gen_t_1_phi = v_gen_tau_1.Phi();
+					gen_t_1_E = v_gen_tau_1.E();
+					gen_h_tt_pT = v_gen_higgs_tt.Pt();
+					gen_h_tt_eta = v_gen_higgs_tt.Eta();
+					gen_h_tt_phi = v_gen_higgs_tt.Phi();
+					gen_h_tt_E = v_gen_higgs_tt.E();
+					t_0_pT = v_tau_0.Pt();
+					t_0_eta = v_tau_0.Eta();
+					t_0_phi = v_tau_0.Phi();
+					t_0_mass = muMass;
+					t_0_mT = getMT(t_0_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_0, v_MPT));
+					t_1_pT = v_tau_1.Pt();
+					t_1_eta = v_tau_1.Eta();
+					t_1_phi = v_tau_1.Phi();
+					t_1_mass = muMass;
+					t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, v_MPT));
+					mPT_pT = reader->MissingET_MET[0];
+					mPT_phi = reader->MissingET_Phi[0];
+					h_tt_pT = v_higgs_tt.Pt();
+					h_tt_eta = v_higgs_tt.Eta();
+					h_tt_phi = v_higgs_tt.Phi();
+					h_tt_mass = v_higgs_tt.M();
+					weight = (double)*reader->Event_Weight;
+					mu_mu->Fill();
+					h_datasetSizes->Fill("e #mu", 1);
+					eventAccepted = true;
+				}
+			}
 		}
+		//___________________________________
+		if (eventAccepted) continue;
+		//Check for e e finalstates___
+		h_e_e_cutFlow->Fill("All", 1);
+		electrons.clear();
+		muons.clear();
+		taus.clear();
+		addMuon = false;
+		addElectron = false;
+		finalstateSet("e_e");
+		if (debug) std::cout << "Running e e\n";
+		for (int i = 0; i < reader->Electron_size; i++) { //Loop through electrons
+			if (reader->Electron_PT[i] > ePTMin && std::abs(reader->Electron_Eta[i]) < eEtaMax
+					&& reader->Electron_IsolationVar[i] < eIsoMax) { //Quality electron
+				electrons.push_back(i);
+			}
+		 	else if (reader->Electron_PT[i] > ePTMinAdd && std::abs(reader->Electron_Eta[i]) < eEtaMaxAdd
+					&& reader->Electron_IsolationVar[i] < eIsoMaxAdd) { //Additional electon
+				addElectron = true;
+				break;
+			}
+		}
+		if (electrons.size() == 2 && !addElectron && 
+			reader->Electron_Charge[electrons[0]] != reader->Electron_Charge[electrons[1]]) { //One quality OS electron pair found and no additional electrons
+			h_e_e_cutFlow->Fill("Quality ee", 1);
+			for (int i = 0; i < reader->MuonLoose_size; i++) { //Loop through muons
+				if (reader->MuonLoose_PT[i] > muPTMinAdd && std::abs(reader->MuonLoose_Eta[i]) < muEtaMaxAdd
+						&& reader->MuonLoose_IsolationVar[i] < muIsoMaxAdd) { //Additional muons
+					addMuon = true;
+					break;
+				}
+			}
+			if (!addMuon) { //No additional muons found
+				h_e_e_cutFlow->Fill("2 e & 0 #mu", 1);
+				for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
+					if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
+							&& std::abs(reader->Jet_Eta[i]) < tauEtaMax) { //Quality tau
+						taus.push_back(i);
+						break
+					}
+				}
+				if (taus.size() == 0) {//No taus
+					h_e_e_cutFlow->Fill("0 #tau", 1);
+					v_tau_1 = getTauLepton(reader, electrons[0], "electron");
+					v_tau_0 = getTauLepton(reader, electrons[0], "electron");
+					v_mPT.SetPtEtaPhiM(reader->MissingET_MET[0], 0.0, reader->MissingET_Phi[0], 0.0);
+					v_higgs_tt = getHiggs2Taus(v_mPT, v_tau_0, v_tau_1);
+					gen_mctMatch = false;
+					if (options["-t"] == "1") {
+						gen_mctMatch = truthCut(options["-i"], cEvent, //Checks final-state selection was correct
+								tau_0, lepton_0, hTauTau, "electron:electron",
+								&mcTruthPlots, &v_gen_higgs_tt,
+								&v_gen_tau_0, &v_gen_tau_1);
+					}
+					if (options["-t"] == "1" & gen_mctMatch) {
+						h_e_e_cutFlow->Fill("MC truth", 1);
+					}
+					if (debug) std::cout << "Accepted mu_mu event\n";
+					gen_t_0_pT = v_gen_tau_0.Pt();
+					gen_t_0_eta = v_gen_tau_0.Eta();
+					gen_t_0_phi = v_gen_tau_0.Phi();
+					gen_t_0_E = v_gen_tau_0.E();
+					gen_t_1_pT = v_gen_tau_1.Pt();
+					gen_t_1_eta = v_gen_tau_1.Eta();
+					gen_t_1_phi = v_gen_tau_1.Phi();
+					gen_t_1_E = v_gen_tau_1.E();
+					gen_h_tt_pT = v_gen_higgs_tt.Pt();
+					gen_h_tt_eta = v_gen_higgs_tt.Eta();
+					gen_h_tt_phi = v_gen_higgs_tt.Phi();
+					gen_h_tt_E = v_gen_higgs_tt.E();
+					t_0_pT = v_tau_0.Pt();
+					t_0_eta = v_tau_0.Eta();
+					t_0_phi = v_tau_0.Phi();
+					t_0_mass = eMass;
+					t_0_mT = getMT(t_0_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_0, v_MPT));
+					t_1_pT = v_tau_1.Pt();
+					t_1_eta = v_tau_1.Eta();
+					t_1_phi = v_tau_1.Phi();
+					t_1_mass = eMass;
+					t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, v_MPT));
+					mPT_pT = reader->MissingET_MET[0];
+					mPT_phi = reader->MissingET_Phi[0];
+					h_tt_pT = v_higgs_tt.Pt();
+					h_tt_eta = v_higgs_tt.Eta();
+					h_tt_phi = v_higgs_tt.Phi();
+					h_tt_mass = v_higgs_tt.M();
+					weight = (double)*reader->Event_Weight;
+					e_e->Fill();
+					h_datasetSizes->Fill("e e", 1);
+					eventAccepted = true;
+				}
+			}
+		}
+		//___________________________________
 		std::cout << "Event loop complete\n";
 		eventTree->Delete();
 		inputData->Close();
@@ -2585,54 +1555,54 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	h_datasetSizes->Write();
 	c_datasetSizes->Print(("../outputs/" + outputName + "/datasetSizes.pdf").c_str());
 	delete c_datasetSizes;
-	TCanvas* c_e_tau_b_b_cutFlow = new TCanvas();
-	c_e_tau_b_b_cutFlow->SetLogy();
-	h_e_tau_b_b_cutFlow->GetXaxis()->SetTitle("Cuts");
-	h_e_tau_b_b_cutFlow->GetYaxis()->SetTitle("Events");
-	h_e_tau_b_b_cutFlow->Draw();
-	h_e_tau_b_b_cutFlow->Write();
-	c_e_tau_b_b_cutFlow->Print(("../outputs/" + outputName + "/e_tau_b_b_cutFlow.pdf").c_str());
-	delete c_e_tau_b_b_cutFlow;
-	TCanvas* c_mu_tau_b_b_cutFlow = new TCanvas();
-	c_mu_tau_b_b_cutFlow->SetLogy();
-	h_mu_tau_b_b_cutFlow->GetXaxis()->SetTitle("Cuts");
-	h_mu_tau_b_b_cutFlow->GetYaxis()->SetTitle("Events");
-	h_mu_tau_b_b_cutFlow->Draw();
-	h_mu_tau_b_b_cutFlow->Write();
-	c_mu_tau_b_b_cutFlow->Print(("../outputs/" + outputName + "/mu_tau_b_b_cutFlow.pdf").c_str());
-	delete c_mu_tau_b_b_cutFlow;
-	TCanvas* c_tau_tau_b_b_cutFlow = new TCanvas();
-	c_tau_tau_b_b_cutFlow->SetLogy();
-	h_tau_tau_b_b_cutFlow->GetXaxis()->SetTitle("Cuts");
-	h_tau_tau_b_b_cutFlow->GetYaxis()->SetTitle("Events");
-	h_tau_tau_b_b_cutFlow->Draw();
-	h_tau_tau_b_b_cutFlow->Write();
-	c_tau_tau_b_b_cutFlow->Print(("../outputs/" + outputName + "/tau_tau_b_b_cutFlow.pdf").c_str());
-	delete c_tau_tau_b_b_cutFlow;
-	TCanvas* c_mu_mu_b_b_cutFlow = new TCanvas();
-	c_mu_mu_b_b_cutFlow->SetLogy();
-	h_mu_mu_b_b_cutFlow->GetXaxis()->SetTitle("Cuts");
-	h_mu_mu_b_b_cutFlow->GetYaxis()->SetTitle("Events");
-	h_mu_mu_b_b_cutFlow->Draw();
-	h_mu_mu_b_b_cutFlow->Write();
-	c_mu_mu_b_b_cutFlow->Print(("../outputs/" + outputName + "/mu_mu_b_b_cutFlow.pdf").c_str());
-	delete c_mu_mu_b_b_cutFlow;
-	TCanvas* c_e_mu_b_b_cutFlow = new TCanvas();
-	c_e_mu_b_b_cutFlow->SetLogy();
-	h_e_mu_b_b_cutFlow->GetXaxis()->SetTitle("Cuts");
-	h_e_mu_b_b_cutFlow->GetYaxis()->SetTitle("Events");
-	h_e_mu_b_b_cutFlow->Draw();
-	h_e_mu_b_b_cutFlow->Write();
-	c_e_mu_b_b_cutFlow->Print(("../outputs/" + outputName + "/e_mu_b_b_cutFlow.pdf").c_str());
-	delete c_e_mu_b_b_cutFlow;
-	TCanvas* c_e_e_b_b_cutFlow = new TCanvas();
-	c_e_e_b_b_cutFlow->SetLogy();
-	h_e_e_b_b_cutFlow->GetXaxis()->SetTitle("Cuts");
-	h_e_e_b_b_cutFlow->GetYaxis()->SetTitle("Events");
-	h_e_e_b_b_cutFlow->Draw();
-	h_e_e_b_b_cutFlow->Write();
-	c_e_e_b_b_cutFlow->Print(("../outputs/" + outputName + "/e_e_b_b_cutFlow.pdf").c_str());
-	delete c_e_e_b_b_cutFlow;
+	TCanvas* c_e_tau_cutFlow = new TCanvas();
+	c_e_tau_cutFlow->SetLogy();
+	h_e_tau_cutFlow->GetXaxis()->SetTitle("Cuts");
+	h_e_tau_cutFlow->GetYaxis()->SetTitle("Events");
+	h_e_tau_cutFlow->Draw();
+	h_e_tau_cutFlow->Write();
+	c_e_tau_cutFlow->Print(("../outputs/" + outputName + "/e_tau_cutFlow.pdf").c_str());
+	delete c_e_tau_cutFlow;
+	TCanvas* c_mu_tau_cutFlow = new TCanvas();
+	c_mu_tau_cutFlow->SetLogy();
+	h_mu_tau_cutFlow->GetXaxis()->SetTitle("Cuts");
+	h_mu_tau_cutFlow->GetYaxis()->SetTitle("Events");
+	h_mu_tau_cutFlow->Draw();
+	h_mu_tau_cutFlow->Write();
+	c_mu_tau_cutFlow->Print(("../outputs/" + outputName + "/mu_tau_cutFlow.pdf").c_str());
+	delete c_mu_tau_cutFlow;
+	TCanvas* c_tau_tau_cutFlow = new TCanvas();
+	c_tau_tau_cutFlow->SetLogy();
+	h_tau_tau_cutFlow->GetXaxis()->SetTitle("Cuts");
+	h_tau_tau_cutFlow->GetYaxis()->SetTitle("Events");
+	h_tau_tau_cutFlow->Draw();
+	h_tau_tau_cutFlow->Write();
+	c_tau_tau_cutFlow->Print(("../outputs/" + outputName + "/tau_tau_cutFlow.pdf").c_str());
+	delete c_tau_tau_cutFlow;
+	TCanvas* c_mu_mu_cutFlow = new TCanvas();
+	c_mu_mu_cutFlow->SetLogy();
+	h_mu_mu_cutFlow->GetXaxis()->SetTitle("Cuts");
+	h_mu_mu_cutFlow->GetYaxis()->SetTitle("Events");
+	h_mu_mu_cutFlow->Draw();
+	h_mu_mu_cutFlow->Write();
+	c_mu_mu_cutFlow->Print(("../outputs/" + outputName + "/mu_mu_cutFlow.pdf").c_str());
+	delete c_mu_mu_cutFlow;
+	TCanvas* c_e_mu_cutFlow = new TCanvas();
+	c_e_mu_cutFlow->SetLogy();
+	h_e_mu_cutFlow->GetXaxis()->SetTitle("Cuts");
+	h_e_mu_cutFlow->GetYaxis()->SetTitle("Events");
+	h_e_mu_cutFlow->Draw();
+	h_e_mu_cutFlow->Write();
+	c_e_mu_cutFlow->Print(("../outputs/" + outputName + "/e_mu_cutFlow.pdf").c_str());
+	delete c_e_mu_cutFlow;
+	TCanvas* c_e_e_cutFlow = new TCanvas();
+	c_e_e_cutFlow->SetLogy();
+	h_e_e_cutFlow->GetXaxis()->SetTitle("Cuts");
+	h_e_e_cutFlow->GetYaxis()->SetTitle("Events");
+	h_e_e_cutFlow->Draw();
+	h_e_e_cutFlow->Write();
+	c_e_e_cutFlow->Print(("../outputs/" + outputName + "/e_e_cutFlow.pdf").c_str());
+	delete c_e_e_cutFlow;
 	TCanvas* c_mcTruth_cutFlow = new TCanvas();
 	mcTruthPlots["cuts"]->GetXaxis()->SetTitle("Cuts");
 	mcTruthPlots["cuts"]->GetYaxis()->SetTitle("Events");
@@ -2640,13 +1610,6 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	mcTruthPlots["cuts"]->Write();
 	c_mcTruth_cutFlow->Print(("../outputs/" + outputName + "/mcTruth_cutFlow.pdf").c_str());
 	delete c_mcTruth_cutFlow;
-	TCanvas* c_mcTruth_bJetMatch = new TCanvas();
-	mcTruthPlots["bMatch"]->GetXaxis()->SetTitle("#DeltaR(b, jet)");
-	mcTruthPlots["bMatch"]->GetYaxis()->SetTitle("Events");
-	mcTruthPlots["bMatch"]->Draw();
-	mcTruthPlots["bMatch"]->Write();
-	c_mcTruth_bJetMatch->Print(("../outputs/" + outputName + "/mcTruth_bMatch.pdf").c_str());
-	delete c_mcTruth_bJetMatch;
 	TCanvas* c_mcTruth_tauJetMatch = new TCanvas();
 	mcTruthPlots["tauMatch"]->GetXaxis()->SetTitle("#DeltaR(#tau, jet)");
 	mcTruthPlots["tauMatch"]->GetYaxis()->SetTitle("Events");
@@ -2665,27 +1628,27 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	//___________________________________________
 	//Save datasets______________________________
 	std::cout << "Saving data\n";
-	e_tau_b_b->Write();
-	mu_tau_b_b->Write();
-	tau_tau_b_b->Write();
-	mu_mu_b_b->Write();
-	e_mu_b_b->Write();
-	e_e_b_b->Write();
+	e_tau->Write();
+	mu_tau->Write();
+	tau_tau->Write();
+	mu_mu->Write();
+	e_mu->Write();
+	e_e->Write();
 	std::cout << "Data saved\n";
 	outputFile->Close();
 	delete outputFile;
-	delete e_tau_b_b;
-	delete mu_tau_b_b;
-	delete tau_tau_b_b;
-	delete mu_mu_b_b;
-	delete e_mu_b_b;
-	delete e_e_b_b;
+	delete e_tau;
+	delete mu_tau;
+	delete tau_tau;
+	delete mu_mu;
+	delete e_mu;
+	delete e_e;
 	delete h_datasetSizes;
-	delete h_e_tau_b_b_cutFlow;
-	delete h_mu_tau_b_b_cutFlow;
-	delete h_tau_tau_b_b_cutFlow;
-	delete h_e_e_b_b_cutFlow;
-	delete h_mu_mu_b_b_cutFlow;
-	delete h_e_mu_b_b_cutFlow;
+	delete h_e_tau_cutFlow;
+	delete h_mu_tau_cutFlow;
+	delete h_tau_tau_cutFlow;
+	delete h_e_e_cutFlow;
+	delete h_mu_mu_cutFlow;
+	delete h_e_mu_cutFlow;
 	//___________________________________________
 }
