@@ -1,17 +1,21 @@
 PREFIX=/afs/cern.ch/sw/lcg/app/releases/ROOT/6.06.00/x86_64-slc6-gcc49-opt/root/bin/
 ROOTCFLAGS=$(shell $(PREFIX)/root-config --cflags)
 ROOTLIBS=$(shell $(PREFIX)/root-config --libs)
-
-DELPHES=$(HOME)/programs/Delphes-3.3.2
-INCLUDE=$(HOME)/programs/include
-
 C++ = g++
-C_FLAGS = -g 
+C_FLAGS = -g
+DELPHES=$(HOME)/programs/Delphes-3.3.2
+INCLUDES = -I$(HOME)/programs/include -I$(PREFIX)/include -I$(DELPHES) -I$(DELPHES)/external
+LIBRARIES = -lGenVector -lRooFit -lRooFitCore -lMinuit -O2 -lboost_regex -lboost_filesystem -lboost_system -L$(PREFIX)/lib -lDelphes -L$(DELPHES)
+OBJS = main.o delphesReader.o
 
-all: delphes_event_selection                                      
+delphes_event_selection: $(OBJS)
+	$(C++) $(OBJS) -o delphes_event_selection $(FLAGS) 
+	
+main.o: main.cc main.hh finalstateCuts.hh delphesReader.h myMethods.hh
+	$(C++) -c main.cc $(FLAGS)  
+	
+delphesReader.o: delphesReader.C delphesReader.h
+	$(C++) -c delphesReader.C $(FLAGS)                            
 
 clean:                                              
-	rm delphes_event_selection
-
-delphes_event_selection: main.cc main.hh finalstateCuts.hh delphesReader.C delphesReader.h
-	$(C++) -L$(HOME)/programs/lib -L$(HOME)/programs/lib64 $(ROOTCFLAGS) -I$(INCLUDE) -I$(DELPHES) -I$(DELPHES)/external $(C_FLAGS) main.cc -o delphes_event_selection $(ROOTLIBS) -lGenVector -O2 -lboost_regex -lboost_filesystem -lboost_system 
+	rm ./*.o ./*~ ./\#*

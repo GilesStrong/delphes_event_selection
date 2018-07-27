@@ -13,7 +13,7 @@ OBJS = main.o delphesReader.o
 delphes_event_selection: $(OBJS)
 	$(C++) $(OBJS) -o delphes_event_selection $(FLAGS) 
 	
-main.o: main.cc main.hh finalstateCuts.hh delphesReader.h $(SVFIT) myMethods.hh
+main.o: main.cc main.hh finalstateCuts.hh delphesReader.h myMethods.hh
 	$(C++) -c main.cc $(FLAGS)  
 	
 delphesReader.o: delphesReader.C delphesReader.h
