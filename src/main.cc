@@ -865,12 +865,12 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					t_0_eta = v_tau_0.Eta();
 					t_0_phi = v_tau_0.Phi();
 					t_0_mass = v_tau_0.M();
-					t_0_mT = getMT(t_0_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_0, v_mPT));
+					t_0_mT = getMT(t_0_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_0, tmpMPT->P4()));
 					t_1_pT = v_tau_1.Pt();
 					t_1_eta = v_tau_1.Eta();
 					t_1_phi = v_tau_1.Phi();
 					t_1_mass = muMass;
-					t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, v_mPT));
+					t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, tmpMPT->P4()));
 					h_tt_pT = v_higgs_tt.Pt();
 					h_tt_eta = v_higgs_tt.Eta();
 					h_tt_phi = v_higgs_tt.Phi();
@@ -894,18 +894,18 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 		addElectron = false;
 		finalstateSet("e_tau");
 		if (debug) std::cout << "Running e tau\n";
-		for (int i = 0; i < branchElectron->GetEntries(); i++) { //Loop through Electons
+		for (int i = 0; i < branchElectron->GetEntries(); i++) { //Loop through Electrons
 			tmpElectron = (Electron*) branchElectron->At(i);
 			if (tmpElectron->PT > ePTMin && std::abs(tmpElectron->Eta) < eEtaMax
 					&& tmpElectron->IsolationVar < eIsoMax) { //Quality Electron
 				electrons.push_back(i);
 			} else if (tmpElectron->PT > ePTMinAdd && std::abs(tmpElectron->Eta) < eEtaMaxAdd
-					&& tmpElectron->IsolationVar < eIsoMaxAdd) { //Additional electon
+					&& tmpElectron->IsolationVar < eIsoMaxAdd) { //Additional Electron
 				addElectron = true;
 				break;
 			}
 		}
-		if (electrons.size() == 1 && !addElectron) { //One quality electon found and no additional electons
+		if (electrons.size() == 1 && !addElectron) { //One quality Electron found and no additional Electrons
 			h_e_tau_cutFlow->Fill("Quality e", 1);
 			tmpElectron = (Electron*) branchElectron->At(electrons[0]);
 			for (int i = 0; i < branchMuon->GetEntries(); i++) { //Loop through muons
@@ -963,12 +963,12 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					t_0_eta = v_tau_0.Eta();
 					t_0_phi = v_tau_0.Phi();
 					t_0_mass = v_tau_0.M();
-					t_0_mT = getMT(t_0_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_0, v_mPT));
+					t_0_mT = getMT(t_0_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_0, tmpMPT->P4()));
 					t_1_pT = v_tau_1.Pt();
 					t_1_eta = v_tau_1.Eta();
 					t_1_phi = v_tau_1.Phi();
 					t_1_mass = eMass;
-					t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, v_mPT));
+					t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, tmpMPT->P4()));
 					h_tt_pT = v_higgs_tt.Pt();
 					h_tt_eta = v_higgs_tt.Eta();
 					h_tt_phi = v_higgs_tt.Phi();
@@ -992,15 +992,15 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 		addElectron = false;
 		finalstateSet("tau_tau");
 		if (debug) std::cout << "Running tau tau\n";
-		for (int i = 0; i < branchElectron->GetEntries(); i++) { //Loop through Electons
+		for (int i = 0; i < branchElectron->GetEntries(); i++) { //Loop through Electrons
 			tmpElectron = (Electron*) branchElectron->At(i);
 			if (tmpElectron->PT > ePTMinAdd && std::abs(tmpElectron->Eta) < eEtaMaxAdd
-					&& tmpElectron->IsolationVar < eIsoMaxAdd) { //Additional electon
+					&& tmpElectron->IsolationVar < eIsoMaxAdd) { //Additional Electron
 				addElectron = true;
 				break;
 			}
 		}
-		if (!addElectron) { //No additional electons
+		if (!addElectron) { //No additional Electrons
 			for (int i = 0; i < branchMuon->GetEntries(); i++) { //Loop through muons
 				tmpMuon = (Muon*) branchMuon->At(i);
 				if (tmpMuon->PT > muPTMinAdd && std::abs(tmpMuon->Eta) < muEtaMaxAdd
@@ -1010,7 +1010,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 				}
 			}
 			if (!addMuon) { //No additional muons found
-				h_tau_tau_b_b_cutFlow->Fill("0 e & 0 #mu", 1);
+				h_tau_tau_cutFlow->Fill("0 e & 0 #mu", 1);
 				for (int i = 0; i < branchJet->GetEntries(); i++) { //Loop through jets
 					tmpJet = (Jet*) branchJet->At(i);
 					if (tmpJet->TauTag == 1 && tmpJet->BTag == 0 && tmpJet->PT > tauPTMin
@@ -1019,7 +1019,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					}
 				}
 				if (taus.size() >= 2) {//2 quality taus
-					h_tau_tau_b_b_cutFlow->Fill("Quality #tau#tau", 1);
+					h_tau_tau_cutFlow->Fill("Quality #tau#tau", 1);
 					if (getOSTauTauPair(branchJet, &taus, &tau_0, &tau_1)) { //OS Tau pair
 						tmpJet = (Jet*)branchJet->At(tau_0);
 						v_tau_0 = tmpJet->P4();
@@ -1057,12 +1057,12 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 						t_0_eta = v_tau_0.Eta();
 						t_0_phi = v_tau_0.Phi();
 						t_0_mass = v_tau_0.M();
-						t_0_mT = getMT(t_0_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_0, v_mPT));
+						t_0_mT = getMT(t_0_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_0, tmpMPT->P4()));
 						t_1_pT = v_tau_1.Pt();
 						t_1_eta = v_tau_1.Eta();
 						t_1_phi = v_tau_1.Phi();
 						t_1_mass = v_tau_1.M();
-						t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, v_mPT));
+						t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, tmpMPT->P4()));
 						h_tt_pT = v_higgs_tt.Pt();
 						h_tt_eta = v_higgs_tt.Eta();
 						h_tt_phi = v_higgs_tt.Phi();
@@ -1157,12 +1157,12 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					t_0_mass = muMass;
 					mPT_pT = tmpMPT->MET;
 					mPT_phi = tmpMPT->Phi;
-					t_0_mT = getMT(t_0_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_0, v_mPT));
+					t_0_mT = getMT(t_0_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_0, tmpMPT->P4()));
 					t_1_pT = v_tau_1.Pt();
 					t_1_eta = v_tau_1.Eta();
 					t_1_phi = v_tau_1.Phi();
 					t_1_mass = muMass;
-					t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, v_mPT));
+					t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, tmpMPT->P4()));
 					h_tt_pT = v_higgs_tt.Pt();
 					h_tt_eta = v_higgs_tt.Eta();
 					h_tt_phi = v_higgs_tt.Phi();
@@ -1199,13 +1199,13 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 		}
 		if (muons.size() == 1 && !addMuon) { //One quality muon found and no additional muons
 			h_e_mu_cutFlow->Fill("Quality #mu", 1);
-			for (int i = 0; i < branchElectron->GetEntries(); i++) { //Loop through Electons
+			for (int i = 0; i < branchElectron->GetEntries(); i++) { //Loop through Electrons
 				tmpElectron = (Electron*) branchElectron->At(i);
 				if (tmpElectron->PT > ePTMin && std::abs(tmpElectron->Eta) < eEtaMax
 						&& tmpElectron->IsolationVar < eIsoMax) { //Quality Electron
 					electrons.push_back(i);
 				} else if (tmpElectron->PT > ePTMinAdd && std::abs(tmpElectron->Eta) < eEtaMaxAdd
-						&& tmpElectron->IsolationVar < eIsoMaxAdd) { //Additional electon
+						&& tmpElectron->IsolationVar < eIsoMaxAdd) { //Additional Electron
 					addElectron = true;
 					break;
 				}
@@ -1224,7 +1224,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					h_e_mu_cutFlow->Fill("0 #tau", 1);
 					tmpMuon = (Muon*) branchMuon->At(muons[0]);
 					v_tau_0 = tmpMuon->P4();
-					tmpElectron = (Electon*) branchElectron->At(electrons[1]);
+					tmpElectron = (Electron*) branchElectron->At(electrons[1]);
 					v_tau_1 = tmpElectron->P4();
 					tmpMPT = (MissingET*)branchMissingET->At(0);
 					v_higgs_tt = getHiggs2Taus(tmpMPT, v_tau_0, v_tau_1);
@@ -1258,12 +1258,12 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					t_0_eta = v_tau_0.Eta();
 					t_0_phi = v_tau_0.Phi();
 					t_0_mass = muMass;
-					t_0_mT = getMT(t_0_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_0, v_mPT));
+					t_0_mT = getMT(t_0_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_0, tmpMPT->P4()));
 					t_1_pT = v_tau_1.Pt();
 					t_1_eta = v_tau_1.Eta();
 					t_1_phi = v_tau_1.Phi();
 					t_1_mass = muMass;
-					t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, v_mPT));
+					t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, tmpMPT->P4()));
 					h_tt_pT = v_higgs_tt.Pt();
 					h_tt_eta = v_higgs_tt.Eta();
 					h_tt_phi = v_higgs_tt.Phi();
@@ -1287,13 +1287,13 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 		addElectron = false;
 		finalstateSet("e_e");
 		if (debug) std::cout << "Running e e\n";
-		for (int i = 0; i < branchElectron->GetEntries(); i++) { //Loop through Electons
+		for (int i = 0; i < branchElectron->GetEntries(); i++) { //Loop through Electrons
 			tmpElectron = (Electron*) branchElectron->At(i);
 			if (tmpElectron->PT > ePTMin && std::abs(tmpElectron->Eta) < eEtaMax
 					&& tmpElectron->IsolationVar < eIsoMax) { //Quality Electron
 				electrons.push_back(i);
 			} else if (tmpElectron->PT > ePTMinAdd && std::abs(tmpElectron->Eta) < eEtaMaxAdd
-					&& tmpElectron->IsolationVar < eIsoMaxAdd) { //Additional electon
+					&& tmpElectron->IsolationVar < eIsoMaxAdd) { //Additional Electron
 				addElectron = true;
 				break;
 			}
@@ -1357,12 +1357,12 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					t_0_eta = v_tau_0.Eta();
 					t_0_phi = v_tau_0.Phi();
 					t_0_mass = eMass;
-					t_0_mT = getMT(t_0_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_0, v_mPT));
+					t_0_mT = getMT(t_0_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_0, tmpMPT->P4()));
 					t_1_pT = v_tau_1.Pt();
 					t_1_eta = v_tau_1.Eta();
 					t_1_phi = v_tau_1.Phi();
 					t_1_mass = eMass;
-					t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, v_mPT));
+					t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, tmpMPT->P4()));
 					h_tt_pT = v_higgs_tt.Pt();
 					h_tt_eta = v_higgs_tt.Eta();
 					h_tt_phi = v_higgs_tt.Phi();
