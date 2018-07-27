@@ -515,7 +515,7 @@ bool truthCut(std::string input, Long64_t cEvent, int l_0, int l_1,
 	//Check if selected final states are correct_
 	(*plots)["cuts"]->Fill("MC-truth check", 1);
 	int hTauTau;
-	if (!getGenHiggs(branchParticle, plots, &hTauTau)) return false
+	if (!getGenHiggs(branchParticle, plots, &hTauTau)) return false;
 	int swap;
 	//Check taus_________________________________
 	if (debug) std::cout << "Checking taus\n";
@@ -1049,6 +1049,8 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					gen_h_tt_eta = v_gen_higgs_tt.Eta();
 					gen_h_tt_phi = v_gen_higgs_tt.Phi();
 					gen_h_tt_E = v_gen_higgs_tt.E();
+					mPT_pT = reader->MissingET_MET[0];
+					mPT_phi = reader->MissingET_Phi[0];
 					t_0_pT = v_tau_0.Pt();
 					t_0_eta = v_tau_0.Eta();
 					t_0_phi = v_tau_0.Phi();
@@ -1059,8 +1061,6 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					t_1_phi = v_tau_1.Phi();
 					t_1_mass = muMass;
 					t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, v_MPT));
-					mPT_pT = reader->MissingET_MET[0];
-					mPT_phi = reader->MissingET_Phi[0];
 					h_tt_pT = v_higgs_tt.Pt();
 					h_tt_eta = v_higgs_tt.Eta();
 					h_tt_phi = v_higgs_tt.Phi();
@@ -1140,6 +1140,8 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					gen_h_tt_eta = v_gen_higgs_tt.Eta();
 					gen_h_tt_phi = v_gen_higgs_tt.Phi();
 					gen_h_tt_E = v_gen_higgs_tt.E();
+					mPT_pT = reader->MissingET_MET[0];
+					mPT_phi = reader->MissingET_Phi[0];
 					t_0_pT = v_tau_0.Pt();
 					t_0_eta = v_tau_0.Eta();
 					t_0_phi = v_tau_0.Phi();
@@ -1150,8 +1152,6 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					t_1_phi = v_tau_1.Phi();
 					t_1_mass = eMass;
 					t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, v_MPT));
-					mPT_pT = reader->MissingET_MET[0];
-					mPT_phi = reader->MissingET_Phi[0];
 					h_tt_pT = v_higgs_tt.Pt();
 					h_tt_eta = v_higgs_tt.Eta();
 					h_tt_phi = v_higgs_tt.Phi();
@@ -1228,6 +1228,8 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 						gen_h_tt_eta = v_gen_higgs_tt.Eta();
 						gen_h_tt_phi = v_gen_higgs_tt.Phi();
 						gen_h_tt_E = v_gen_higgs_tt.E();
+						mPT_pT = reader->MissingET_MET[0];
+						mPT_phi = reader->MissingET_Phi[0];
 						t_0_pT = v_tau_0.Pt();
 						t_0_eta = v_tau_0.Eta();
 						t_0_phi = v_tau_0.Phi();
@@ -1238,8 +1240,6 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 						t_1_phi = v_tau_1.Phi();
 						t_1_mass = v_tau_1.M();
 						t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, v_MPT));
-						mPT_pT = reader->MissingET_MET[0];
-						mPT_phi = reader->MissingET_Phi[0];
 						h_tt_pT = v_higgs_tt.Pt();
 						h_tt_eta = v_higgs_tt.Eta();
 						h_tt_phi = v_higgs_tt.Phi();
@@ -1326,14 +1326,14 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					t_0_eta = v_tau_0.Eta();
 					t_0_phi = v_tau_0.Phi();
 					t_0_mass = muMass;
+					mPT_pT = reader->MissingET_MET[0];
+					mPT_phi = reader->MissingET_Phi[0];
 					t_0_mT = getMT(t_0_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_0, v_MPT));
 					t_1_pT = v_tau_1.Pt();
 					t_1_eta = v_tau_1.Eta();
 					t_1_phi = v_tau_1.Phi();
 					t_1_mass = muMass;
 					t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, v_MPT));
-					mPT_pT = reader->MissingET_MET[0];
-					mPT_phi = reader->MissingET_Phi[0];
 					h_tt_pT = v_higgs_tt.Pt();
 					h_tt_eta = v_higgs_tt.Eta();
 					h_tt_phi = v_higgs_tt.Phi();
@@ -1419,6 +1419,8 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					gen_h_tt_eta = v_gen_higgs_tt.Eta();
 					gen_h_tt_phi = v_gen_higgs_tt.Phi();
 					gen_h_tt_E = v_gen_higgs_tt.E();
+					mPT_pT = reader->MissingET_MET[0];
+					mPT_phi = reader->MissingET_Phi[0];
 					t_0_pT = v_tau_0.Pt();
 					t_0_eta = v_tau_0.Eta();
 					t_0_phi = v_tau_0.Phi();
@@ -1429,8 +1431,6 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					t_1_phi = v_tau_1.Phi();
 					t_1_mass = muMass;
 					t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, v_MPT));
-					mPT_pT = reader->MissingET_MET[0];
-					mPT_phi = reader->MissingET_Phi[0];
 					h_tt_pT = v_higgs_tt.Pt();
 					h_tt_eta = v_higgs_tt.Eta();
 					h_tt_phi = v_higgs_tt.Phi();
@@ -1512,6 +1512,8 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					gen_h_tt_eta = v_gen_higgs_tt.Eta();
 					gen_h_tt_phi = v_gen_higgs_tt.Phi();
 					gen_h_tt_E = v_gen_higgs_tt.E();
+					mPT_pT = reader->MissingET_MET[0];
+					mPT_phi = reader->MissingET_Phi[0];
 					t_0_pT = v_tau_0.Pt();
 					t_0_eta = v_tau_0.Eta();
 					t_0_phi = v_tau_0.Phi();
@@ -1522,8 +1524,6 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					t_1_phi = v_tau_1.Phi();
 					t_1_mass = eMass;
 					t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, v_MPT));
-					mPT_pT = reader->MissingET_MET[0];
-					mPT_phi = reader->MissingET_Phi[0];
 					h_tt_pT = v_higgs_tt.Pt();
 					h_tt_eta = v_higgs_tt.Eta();
 					h_tt_phi = v_higgs_tt.Phi();
