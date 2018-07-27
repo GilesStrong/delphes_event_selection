@@ -1,6 +1,6 @@
-PREFIX=/afs/cern.ch/sw/lcg/app/releases/ROOT/6.06.00/x86_64-slc6-gcc49-opt/root/bin/
-ROOTCFLAGS=$(shell $(PREFIX)/root-config --cflags)
-ROOTLIBS=$(shell $(PREFIX)/root-config --libs)
+PREFIX=/afs/cern.ch/sw/lcg/app/releases/ROOT/6.06.00/x86_64-slc6-gcc49-opt/root/
+ROOTCFLAGS=$(shell $(PREFIX)/bin/root-config --cflags)
+ROOTLIBS=$(shell $(PREFIX)/bin/root-config --libs)
 C++ = g++
 C_FLAGS = -g
 DELPHES=$(HOME)/programs/Delphes-3.3.2
