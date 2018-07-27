@@ -514,7 +514,7 @@ bool truthCut(std::string input, Long64_t cEvent, int l_0, int l_1,
 	if (debug) std::cout << "Loading data for MC truth cut on event mode " << mode << "\n";
 	//Check if selected final states are correct_
 	(*plots)["cuts"]->Fill("MC-truth check", 1);
-	int hTauTau,
+	int hTauTau;
 	if (!getGenHiggs(branchParticle, plots, &hTauTau)) return false
 	int swap;
 	//Check taus_________________________________
@@ -523,7 +523,7 @@ bool truthCut(std::string input, Long64_t cEvent, int l_0, int l_1,
 	boost::split(options, mode, boost::is_any_of(":"));
 	(*plots)["cuts"]->Fill("#taus check", 1);
 	(*plots)["cuts"]->Fill(("h->#tau#tau->" + typeLookup(mode) + " check").c_str(), 1);
-	GenParticle *tau_0, *tau_1;
+	GenParticle *tau_0, *tau_1, *higgs;
 	higgs = (GenParticle*)branchParticle->At(hTauTau);
 	if (options[0] == "tau" && options[1] == "tau") {
 		//h->tau_h tau_h_________________________
@@ -968,7 +968,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	Long64_t nEvents = reader->fChain->GetEntriesFast();
 	std::cout << "Total number of events in file: " << nEvents << "\n";
 	std::vector<int> taus, electrons, muons;
-	TLorentzVector v_tau_0, v_tau_1 v_higgs_tt, v_mPT;
+	TLorentzVector v_tau_0, v_tau_1, v_higgs_tt, v_mPT;
 	TLorentzVector v_gen_higgs_tt, v_gen_tau_0, v_gen_tau_1;
 	bool addMuon, addElectron;
 	std::cout << "Beginning event loop\n";
@@ -1004,7 +1004,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 			}
 		}
 		if (muons.size() == 1 && !addMuon) { //One quality muon found and no additional muons
-			h_mu_tau_b_b_cutFlow->Fill("Quality #mu", 1);
+			h_mu_tau_cutFlow->Fill("Quality #mu", 1);
 			for (int i = 0; i < reader->Electron_size; i++) { //Loop through electrons
 				if (reader->Electron_PT[i] > ePTMinAdd && std::abs(reader->Electron_Eta[i]) < eEtaMaxAdd
 						&& reader->Electron_IsolationVar[i] < eIsoMaxAdd) { //Additional electron
@@ -1029,7 +1029,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					gen_mctMatch = false;
 					if (options["-t"] == "1") {
 						gen_mctMatch = truthCut(options["-i"], cEvent, //Checks final-state selection was correct
-								tau_0, lepton_0, hTauTau, "tau:muon",
+								taus[0], muons[0], "tau:muon",
 								&mcTruthPlots, &v_gen_higgs_tt,
 								&v_gen_tau_0, &v_gen_tau_1);
 					}
@@ -1120,7 +1120,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					gen_mctMatch = false;
 					if (options["-t"] == "1") {
 						gen_mctMatch = truthCut(options["-i"], cEvent, //Checks final-state selection was correct
-								tau_0, lepton_0, hTauTau, "tau:electron",
+								taus[0], electrons[0], "tau:electron",
 								&mcTruthPlots, &v_gen_higgs_tt,
 								&v_gen_tau_0, &v_gen_tau_1);
 					}
@@ -1208,7 +1208,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 						gen_mctMatch = false;
 						if (options["-t"] == "1") {
 							gen_mctMatch = truthCut(options["-i"], cEvent, //Checks final-state selection was correct
-									tau_0, lepton_0, hTauTau, "tau:tau",
+									tau_0, tau_1 "tau:tau",
 									&mcTruthPlots, &v_gen_higgs_tt,
 									&v_gen_tau_0, &v_gen_tau_1);
 						}
@@ -1295,14 +1295,14 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 				}
 				if (taus.size() == 0) {//No taus
 					h_mu_mu_cutFlow->Fill("0 #tau", 1);
-					v_tau_1 = getTauLepton(reader, muons[0], "muon");
+					v_tau_1 = getTauLepton(reader, muons[1], "muon");
 					v_tau_0 = getTauLepton(reader, muons[0], "muon");
 					v_mPT.SetPtEtaPhiM(reader->MissingET_MET[0], 0.0, reader->MissingET_Phi[0], 0.0);
 					v_higgs_tt = getHiggs2Taus(v_mPT, v_tau_0, v_tau_1);
 					gen_mctMatch = false;
 					if (options["-t"] == "1") {
 						gen_mctMatch = truthCut(options["-i"], cEvent, //Checks final-state selection was correct
-								tau_0, lepton_0, hTauTau, "muon:muon",
+								muons[0], muons[1], "muon:muon",
 								&mcTruthPlots, &v_gen_higgs_tt,
 								&v_gen_tau_0, &v_gen_tau_1);
 					}
@@ -1399,7 +1399,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					gen_mctMatch = false;
 					if (options["-t"] == "1") {
 						gen_mctMatch = truthCut(options["-i"], cEvent, //Checks final-state selection was correct
-								tau_0, lepton_0, hTauTau, "muon:electron",
+								muons[0], electrons[0], "muon:electron",
 								&mcTruthPlots, &v_gen_higgs_tt,
 								&v_gen_tau_0, &v_gen_tau_1);
 					}
@@ -1485,14 +1485,14 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 				}
 				if (taus.size() == 0) {//No taus
 					h_e_e_cutFlow->Fill("0 #tau", 1);
-					v_tau_1 = getTauLepton(reader, electrons[0], "electron");
+					v_tau_1 = getTauLepton(reader, electrons[1], "electron");
 					v_tau_0 = getTauLepton(reader, electrons[0], "electron");
 					v_mPT.SetPtEtaPhiM(reader->MissingET_MET[0], 0.0, reader->MissingET_Phi[0], 0.0);
 					v_higgs_tt = getHiggs2Taus(v_mPT, v_tau_0, v_tau_1);
 					gen_mctMatch = false;
 					if (options["-t"] == "1") {
 						gen_mctMatch = truthCut(options["-i"], cEvent, //Checks final-state selection was correct
-								tau_0, lepton_0, hTauTau, "electron:electron",
+								electrons[0], electrons[1], "electron:electron",
 								&mcTruthPlots, &v_gen_higgs_tt,
 								&v_gen_tau_0, &v_gen_tau_1);
 					}
