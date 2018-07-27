@@ -1107,7 +1107,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 				h_e_tau_cutFlow->Fill("1 e & 0 #mu", 1);
 				for (int i = 0; i < reader->Jet_size; i++) { //Loop through jets
 					if (reader->Jet_TauTag[i] == 1 && reader->Jet_BTag[i] == 0 && reader->Jet_PT[i] > tauPTMin
-							&& std::abs(reader->Jet_Eta[i]) < tauEtaMax && reader->Jet_Charge[i] != reader->Electrons_Charge[electrons[0]]) { //Quality OS tau
+							&& std::abs(reader->Jet_Eta[i]) < tauEtaMax && reader->Jet_Charge[i] != reader->Electron_Charge[electrons[0]]) { //Quality OS tau
 						taus.push_back(i);
 					}
 				}
