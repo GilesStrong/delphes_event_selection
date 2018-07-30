@@ -467,9 +467,9 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	double h_tt_pT, h_tt_eta, h_tt_phi, h_tt_mass; //Higgs 0 variables
 	//___________________________________________
 	//Generator-level variables for regression and cuts
-	double gen_t_0_pT, gen_t_0_eta, gen_t_0_phi, gen_t_0_E; //Tau 0 variables
-	double gen_t_1_pT, gen_t_1_eta, gen_t_1_phi, gen_t_1_E; //Tau 1 variables
-	double gen_h_tt_pT, gen_h_tt_eta, gen_h_tt_phi, gen_h_tt_E; //Higgs->tau tau variables
+	double gen_t_0_pT, gen_t_0_eta, gen_t_0_phi, gen_t_0_E, gen_t_0_mass; //Tau 0 variables
+	double gen_t_1_pT, gen_t_1_eta, gen_t_1_phi, gen_t_1_E, gen_t_1_mass; //Tau 1 variables
+	double gen_h_tt_pT, gen_h_tt_eta, gen_h_tt_phi, gen_h_tt_E, gen_h_tt_mass; //Higgs->tau tau variables
 	bool gen_mctMatch; //MC truth match
 	//___________________________________________
 	double weight; //Event weight
@@ -845,14 +845,17 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					gen_t_0_eta = v_gen_tau_0.Eta();
 					gen_t_0_phi = v_gen_tau_0.Phi();
 					gen_t_0_E = v_gen_tau_0.E();
+					gen_t_0_mass = v_gen_tau_0.M();
 					gen_t_1_pT = v_gen_tau_1.Pt();
 					gen_t_1_eta = v_gen_tau_1.Eta();
 					gen_t_1_phi = v_gen_tau_1.Phi();
 					gen_t_1_E = v_gen_tau_1.E();
+					gen_t_1_mass = v_gen_tau_1.M();
 					gen_h_tt_pT = v_gen_higgs_tt.Pt();
 					gen_h_tt_eta = v_gen_higgs_tt.Eta();
 					gen_h_tt_phi = v_gen_higgs_tt.Phi();
 					gen_h_tt_E = v_gen_higgs_tt.E();
+					gen_h_tt_mass = v_gen_higgs_tt.M();
 					mPT_pT = tmpMPT->MET;
 					mPT_phi = tmpMPT->Phi;
 					t_0_pT = v_tau_0.Pt();
@@ -942,14 +945,17 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					gen_t_0_eta = v_gen_tau_0.Eta();
 					gen_t_0_phi = v_gen_tau_0.Phi();
 					gen_t_0_E = v_gen_tau_0.E();
+					gen_t_0_mass = v_gen_tau_0.M();
 					gen_t_1_pT = v_gen_tau_1.Pt();
 					gen_t_1_eta = v_gen_tau_1.Eta();
 					gen_t_1_phi = v_gen_tau_1.Phi();
 					gen_t_1_E = v_gen_tau_1.E();
+					gen_t_1_mass = v_gen_tau_1.M();
 					gen_h_tt_pT = v_gen_higgs_tt.Pt();
 					gen_h_tt_eta = v_gen_higgs_tt.Eta();
 					gen_h_tt_phi = v_gen_higgs_tt.Phi();
 					gen_h_tt_E = v_gen_higgs_tt.E();
+					gen_h_tt_mass = v_gen_higgs_tt.M();
 					mPT_pT = tmpMPT->MET;
 					mPT_phi = tmpMPT->Phi;
 					t_0_pT = v_tau_0.Pt();
@@ -1036,14 +1042,17 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 						gen_t_0_eta = v_gen_tau_0.Eta();
 						gen_t_0_phi = v_gen_tau_0.Phi();
 						gen_t_0_E = v_gen_tau_0.E();
+						gen_t_0_mass = v_gen_tau_0.M();
 						gen_t_1_pT = v_gen_tau_1.Pt();
 						gen_t_1_eta = v_gen_tau_1.Eta();
 						gen_t_1_phi = v_gen_tau_1.Phi();
 						gen_t_1_E = v_gen_tau_1.E();
+						gen_t_1_mass = v_gen_tau_1.M();
 						gen_h_tt_pT = v_gen_higgs_tt.Pt();
 						gen_h_tt_eta = v_gen_higgs_tt.Eta();
 						gen_h_tt_phi = v_gen_higgs_tt.Phi();
 						gen_h_tt_E = v_gen_higgs_tt.E();
+						gen_h_tt_mass = v_gen_higgs_tt.M();
 						mPT_pT = tmpMPT->MET;
 						mPT_phi = tmpMPT->Phi;
 						t_0_pT = v_tau_0.Pt();
@@ -1135,14 +1144,17 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					gen_t_0_eta = v_gen_tau_0.Eta();
 					gen_t_0_phi = v_gen_tau_0.Phi();
 					gen_t_0_E = v_gen_tau_0.E();
+					gen_t_0_mass = v_gen_tau_0.M();
 					gen_t_1_pT = v_gen_tau_1.Pt();
 					gen_t_1_eta = v_gen_tau_1.Eta();
 					gen_t_1_phi = v_gen_tau_1.Phi();
 					gen_t_1_E = v_gen_tau_1.E();
+					gen_t_1_mass = v_gen_tau_1.M();
 					gen_h_tt_pT = v_gen_higgs_tt.Pt();
 					gen_h_tt_eta = v_gen_higgs_tt.Eta();
 					gen_h_tt_phi = v_gen_higgs_tt.Phi();
 					gen_h_tt_E = v_gen_higgs_tt.E();
+					gen_h_tt_mass = v_gen_higgs_tt.M();
 					t_0_pT = v_tau_0.Pt();
 					t_0_eta = v_tau_0.Eta();
 					t_0_phi = v_tau_0.Phi();
@@ -1235,14 +1247,17 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					gen_t_0_eta = v_gen_tau_0.Eta();
 					gen_t_0_phi = v_gen_tau_0.Phi();
 					gen_t_0_E = v_gen_tau_0.E();
+					gen_t_0_mass = v_gen_tau_0.M();
 					gen_t_1_pT = v_gen_tau_1.Pt();
 					gen_t_1_eta = v_gen_tau_1.Eta();
 					gen_t_1_phi = v_gen_tau_1.Phi();
 					gen_t_1_E = v_gen_tau_1.E();
+					gen_t_1_mass = v_gen_tau_1.M();
 					gen_h_tt_pT = v_gen_higgs_tt.Pt();
 					gen_h_tt_eta = v_gen_higgs_tt.Eta();
 					gen_h_tt_phi = v_gen_higgs_tt.Phi();
 					gen_h_tt_E = v_gen_higgs_tt.E();
+					gen_h_tt_mass = v_gen_higgs_tt.M();
 					mPT_pT = tmpMPT->MET;
 					mPT_phi = tmpMPT->Phi;
 					t_0_pT = v_tau_0.Pt();
@@ -1333,14 +1348,17 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					gen_t_0_eta = v_gen_tau_0.Eta();
 					gen_t_0_phi = v_gen_tau_0.Phi();
 					gen_t_0_E = v_gen_tau_0.E();
+					gen_t_0_mass = v_gen_tau_0.M();
 					gen_t_1_pT = v_gen_tau_1.Pt();
 					gen_t_1_eta = v_gen_tau_1.Eta();
 					gen_t_1_phi = v_gen_tau_1.Phi();
 					gen_t_1_E = v_gen_tau_1.E();
+					gen_t_1_mass = v_gen_tau_1.M();
 					gen_h_tt_pT = v_gen_higgs_tt.Pt();
 					gen_h_tt_eta = v_gen_higgs_tt.Eta();
 					gen_h_tt_phi = v_gen_higgs_tt.Phi();
 					gen_h_tt_E = v_gen_higgs_tt.E();
+					gen_h_tt_mass = v_gen_higgs_tt.M();
 					mPT_pT = tmpMPT->MET;
 					mPT_phi = tmpMPT->Phi;
 					t_0_pT = v_tau_0.Pt();
