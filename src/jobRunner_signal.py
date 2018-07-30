@@ -18,8 +18,8 @@ def submitJob(inputFile, mass, queue, dryrun, uid):
 
     job += 'mkdir ' + workDir + mass + '\n'
 
-    job += softDir + './delphes_event_selection'
-    job += ' -i ' + inputFile
+    job += softDir + '/delphes_event_selection'
+    job += ' -i ' + inputFile + 
     job += ' -o ' + workDir + mass + '/' + uid
     job += ' -t 1'
 
@@ -51,4 +51,4 @@ if __name__ == "__main__":
         samples = glob.glob(masspoint + '/*')
         print len(samples), "samples found for mass point", mass
         for uid, sample in enumerate(samples):
-            submitJob(sample, mass, opts.queue, opts.dryrun, str(uid))
+            submitJob(sample + '/' + fileName, mass, opts.queue, opts.dryrun, str(uid))
