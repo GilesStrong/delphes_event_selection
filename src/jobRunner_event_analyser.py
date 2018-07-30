@@ -1,60 +1,53 @@
-'''Giles Strong (giles.strong@outlook.com)'''
-
 from __future__ import division
-import os
-import os.path
+
+import glob
 import optparse
+import os
 
-pwd = os.getcwd()
-userDir = "/home/strong/"
+workDir = '/afs/cern.ch/work/g/gstrong/private/DiTauSkims/'
+dataDir =  '/eos/cms/store/cmst3/group/exovv/clange/Xtautau/'
+fileName = 'Xtautau_delphes_events.root'
+softDir = '$HOME/delphes_event_selection/src'
 
-def makeJOFile(start, opts):
-    stop = start+int(opts.population[-1])
-    numbers = str(start) + "_to_" + str(stop)
-    inputFile = opts.input[-1] + numbers + ".root"
-    name = opts.input[-1].split("/")[-1]
-    if not "default" in opts.output[-1]:
-        outputFile = opts.output[-1]
-    else:
-        outputFile = name
-    outputFile += numbers
-    cmd = "./delphes_event_selection "
-    cmd += "-i " + inputFile
-    cmd += " -o " + outputFile
-    cmd += " -t " + str(opts.truth[-1])
-    cmd += " -r " + str(opts.response[-1])
-    cmd += " -s " + str(opts.selection[-1])
-    cmd += " -d " + str(opts.debug[-1])
-    cmd += " -m " + str(opts.mva[-1])
-    joName = name + "analysis_" + numbers + ".job"
-    joFile = open(joName, "w")
-    joFile.write("echo Beginning\ job\n")
-    joFile.write("source " + userDir + ".bashrc\n")
-    joFile.write("echo Paths\ set\n")
-    joFile.write("cd " + pwd + "\n")
-    joFile.write(cmd + "\n")
-    joFile.close()
-    sub = "qsub " + joName + " -q " + opts.queue[-1]
+def submitJob(inputFiles, mass, queue, dryrun, uid):
+    job = 'export HOME=/afs/cern.ch/user/g/gstrong/\n'
+    job += 'source /afs/cern.ch/sw/lcg/external/gcc/4.9.3/x86_64-slc6/setup.sh\n'
+    job += 'source /afs/cern.ch/sw/lcg/app/releases/ROOT/6.06.00/x86_64-slc6-gcc49-opt/root/bin/thisroot.sh\n'
+    job += 'export LD_LIBRARY_PATH=$HOME/programs/Delphes-3.3.2/:$HOME/programs/lib/:$HOME/programs/lib64/:$LD_LIBRARY_PATH\n'
+    job += 'export PATH=$HOME/miniconda2/bin:$HOME/programs/bin:$PATH\n'
+
+    job += 'mkdir ' + workDir + mass + '\n'
+
+    job += softDir + './delphes_event_selection'
+    job += ' -i ' + inputFile
+    job += ' -o ' + workDir + mass + '/' + uid
+    job += ' -t ' + 
+
+    jobName = mass + '_' + uid + '.job'
+    with open(jobName, 'w') as f:
+        f.write(job)
+
+    sub = "bsub -q " + queue + " " + jobName
     print "Submitting: " + sub
-    os.system(sub)
+
+    os.system("chmod 744 " + jobName)
+    if not dryrun:
+        os.system(sub)
 
 if __name__ == "__main__":
     parser = optparse.OptionParser(usage = __doc__)
-    parser.add_option("-i", "--input", dest = "input", action = "append", help = "Basic input name.")
-    parser.add_option("-o", "--output", dest = "output", action = "append", default = ["default"], help = "Output name. Default: base on input name")
-    parser.add_option("-n", "--nFiles", dest = "nFiles", action = "append", default = [100], help = "Number of files to process. [0, inf], default: 100")
-    parser.add_option("-p", "--population", dest = "population", action = "append", default = [100000], help = "Number of events per file. [0, inf], default: 100000")
-    parser.add_option("-a", "--first", dest = "first", action = "append", default = [0], help = "First event event to process. [0, inf], default: 0")
-    parser.add_option("-t", "--truth", dest = "truth", action = "append", default = [0], help = "Use MC truth cut. {0,1}, default: 0")
-    parser.add_option("-s", "--selection", dest = "selection", action = "append", default = [1], help = "Run event selection. {0,1}, default: 1")
-    parser.add_option("-d", "--debug", dest = "debug", action = "append", default = [0], help = "Run in debug mode. {0,1}, default: 0")
-    parser.add_option("-m", "--mva", dest = "mva", action = "append", default = [0], help = "Output information for MVA selection. {0,1}, default: 0")
-    parser.add_option("-q", "--queue", dest = "queue", action = "append", default = ["normal"], help = "Queue to run jobs. Default: normal")
+    parser.add_option("-n", "--nFiles", dest = "nFiles", type='int', action = "store", default = "3", help = "Number of files per job. Default: 3")
+    parser.add_option("-d", "--dryrun", dest = "dryrun", action = "store", default = False, help = "Dry run?, default False")
+    parser.add_option("-q", "--queue", dest = "queue", action = "store", default = '8nh', help = "Queue for submission. Default 8nh")
     opts, args = parser.parse_args()
-    nEvents = int(opts.nFiles[-1])*opts.population[-1]
-    runNumbers = range(int(opts.first[-1]), int(opts.first[-1])+nEvents, int(opts.population[-1]))
-    print "Setting " + str(len(runNumbers)) + " jobs to run on queue " + opts.queue[-1] + " over " + str(nEvents/len(runNumbers)) + " events each,"
-    print "between event numbers " + str(opts.first[-1]) + " and " + str(int(opts.first[-1])+nEvents) + " of file " + opts.input[-1]
-    if raw_input("Continue? [y/n]: ").lower().strip() == "y":
-        for i in runNumbers:
-            makeJOFile(i, opts)
+
+    masses = glob.glob(dataDir + '*')
+    print len(masses), "mass points found"
+    
+    for masspoint in masses:
+        mass = masspoint[masspoint.rfind('/')+1:]
+        samples = glob.glob(masspoint + '/*')
+        print len(samples), "samples found for mass point", mass
+        for uid, dirs in enumerate([samples[x:x+opts.nFiles] for x in xrange(0, len(samples), opts.nFiles)]):
+            files = [x + '/' + fileName for x in dirs]
+            submitJob(','.join(files), mass, opts.queue, opts.dryrun, str(uid))
