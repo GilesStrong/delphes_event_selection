@@ -297,7 +297,7 @@ bool getGenHiggs(TClonesArray *branchParticle,
 					if (std::abs(((GenParticle*)branchParticle->At(((GenParticle*)branchParticle->At(p))->D1))->PID) == 15
 							&& std::abs(((GenParticle*)branchParticle->At(((GenParticle*)branchParticle->At(p))->D2))->PID) == 15) { //Daughters are taus
 						if (hTauTau != NULL) *hTauTau = p; //Point to Higgs
-						if (plots != NULL) (*plots)["cuts"]->Fill("hh->tau#tau pass", 1);
+						if (plots != NULL) (*plots)["cuts"]->Fill("h->tau#tau pass", 1);
 						return true;
 					}
 				}
@@ -666,7 +666,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	std::cout << "Initialising plot\n";
 	std::map<std::string, TH1D*> mcTruthPlots;
 	TH1D* h_datasetSizes = new TH1D("Dataset_sizes", "Dataset sizes", 7, -0.7, 0.7);
-	mcTruthPlots.insert(std::make_pair("cuts", new TH1D("mcTruth_cutFlow", "MC Truth Cuts", 20, -2.0, 2.0)));
+	mcTruthPlots.insert(std::make_pair("cuts", new TH1D("mcTruth_cutFlow", "MC Truth Cuts", 18, -1.8, 1.8)));
 	mcTruthPlots.insert(std::make_pair("tauMatch", new TH1D("mcTruth_tauJetMatching", "#DeltaR(#tau, jet)", 50, 0.0, 0.5)));
 	mcTruthPlots.insert(std::make_pair("higgsDecay", new TH1D("mcTruth_higgsDecay", "Higgs product |PID|", 50, 0, 50)));
 	TH1D* h_e_tau_cutFlow;
@@ -676,19 +676,19 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	TH1D* h_mu_mu_cutFlow;
 	TH1D* h_e_mu_cutFlow;
 	if (options["-t"] == "0") {
-		h_e_tau_cutFlow = new TH1D("e_tau_Cut_Flow", "e #tau_{h}cut flow", 8, -0.8, 0.8);
-		h_mu_tau_cutFlow = new TH1D("mu_tau_Cut_Flow", "#mu #tau_{h}cut flow", 8, -0.8, 0.8);
-		h_tau_tau_cutFlow = new TH1D("tau_tau_Cut_Flow", "#tau_{h} #tau_{h}cut flow", 7, -0.7, 0.7);
-		h_e_e_cutFlow = new TH1D("e_e_Cut_Flow", "e ecut flow", 8, -0.8, 0.8);
-		h_mu_mu_cutFlow = new TH1D("mu_mu_Cut_Flow", "#mu #mu cut flow", 8, -0.8, 0.8);
-		h_e_mu_cutFlow = new TH1D("e_mu_Cut_Flow", "e #mu cut flow", 8, -0.8, 0.8);
+		h_e_tau_cutFlow = new TH1D("e_tau_Cut_Flow", "e #tau_{h}cut flow", 4, -0.4, 0.4);
+		h_mu_tau_cutFlow = new TH1D("mu_tau_Cut_Flow", "#mu #tau_{h}cut flow", 4, -0.4, 0.4);
+		h_tau_tau_cutFlow = new TH1D("tau_tau_Cut_Flow", "#tau_{h} #tau_{h}cut flow", 4, -0.4, 0.4);
+		h_e_e_cutFlow = new TH1D("e_e_Cut_Flow", "e ecut flow", 4, -0.4, 0.4);
+		h_mu_mu_cutFlow = new TH1D("mu_mu_Cut_Flow", "#mu #mu cut flow", 4, -0.4, 0.4);
+		h_e_mu_cutFlow = new TH1D("e_mu_Cut_Flow", "e #mu cut flow", 4, -0.4, 0.4);
 	} else {
-		h_e_tau_cutFlow = new TH1D("e_tau_Cut_Flow", "e #tau_{h} cut flow", 9, -0.9, 0.9);
-		h_mu_tau_cutFlow = new TH1D("mu_tau_Cut_Flow", "#mu #tau_{h} cut flow", 9, -0.9, 0.9);
-		h_tau_tau_cutFlow = new TH1D("tau_tau_Cut_Flow", "#tau_{h} #tau_{h} cut flow", 8, -0.8, 0.8);
-		h_e_e_cutFlow = new TH1D("e_e_Cut_Flow", "e e b cut flow", 9, -0.9, 0.9);
-		h_mu_mu_cutFlow = new TH1D("mu_mu_Cut_Flow", "#mu #mu cut flow", 9, -0.9, 0.9);
-		h_e_mu_cutFlow = new TH1D("e_mu_Cut_Flow", "e #mu cut flow", 9, -0.9, 0.9);
+		h_e_tau_cutFlow = new TH1D("e_tau_Cut_Flow", "e #tau_{h} cut flow", 5, -0.5, 0.5);
+		h_mu_tau_cutFlow = new TH1D("mu_tau_Cut_Flow", "#mu #tau_{h} cut flow", 5, -0.5, 0.5);
+		h_tau_tau_cutFlow = new TH1D("tau_tau_Cut_Flow", "#tau_{h} #tau_{h} cut flow", 5, -0.5, 0.5);
+		h_e_e_cutFlow = new TH1D("e_e_Cut_Flow", "e e b cut flow", 5, -0.5, 0.5);
+		h_mu_mu_cutFlow = new TH1D("mu_mu_Cut_Flow", "#mu #mu cut flow", 5, -0.5, 0.5);
+		h_e_mu_cutFlow = new TH1D("e_mu_Cut_Flow", "e #mu cut flow", 5, -0.5, 0.5);
 	}
 	h_datasetSizes->GetXaxis()->SetBinLabel(1, "All");
 	h_datasetSizes->GetXaxis()->SetBinLabel(2, "#mu #tau_{h}");
@@ -701,53 +701,50 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	h_e_tau_cutFlow->GetXaxis()->SetBinLabel(2, "Quality e");
 	h_e_tau_cutFlow->GetXaxis()->SetBinLabel(3, "1 e & 0 #mu");
 	h_e_tau_cutFlow->GetXaxis()->SetBinLabel(4, "Quality #tau");
-	if (options["-t"] == "1") h_e_tau_cutFlow->GetXaxis()->SetBinLabel(9, "MC truth");
+	if (options["-t"] == "1") h_e_tau_cutFlow->GetXaxis()->SetBinLabel(5, "MC truth");
 	h_mu_tau_cutFlow->GetXaxis()->SetBinLabel(1, "All");
 	h_mu_tau_cutFlow->GetXaxis()->SetBinLabel(2, "Quality #mu");
 	h_mu_tau_cutFlow->GetXaxis()->SetBinLabel(3, "1 #mu & 0 e");
 	h_mu_tau_cutFlow->GetXaxis()->SetBinLabel(4, "Quality #tau");
-	if (options["-t"] == "1") h_mu_tau_cutFlow->GetXaxis()->SetBinLabel(9, "MC truth");
+	if (options["-t"] == "1") h_mu_tau_cutFlow->GetXaxis()->SetBinLabel(5, "MC truth");
 	h_tau_tau_cutFlow->GetXaxis()->SetBinLabel(1, "All");
 	h_tau_tau_cutFlow->GetXaxis()->SetBinLabel(2, "0 e & 0 #mu");
 	h_tau_tau_cutFlow->GetXaxis()->SetBinLabel(3, "Quality #tau#tau");
 	h_tau_tau_cutFlow->GetXaxis()->SetBinLabel(4, "OS");
-	if (options["-t"] == "1") h_tau_tau_cutFlow->GetXaxis()->SetBinLabel(8, "MC truth");
+	if (options["-t"] == "1") h_tau_tau_cutFlow->GetXaxis()->SetBinLabel(5, "MC truth");
 	h_e_e_cutFlow->GetXaxis()->SetBinLabel(1, "All");
 	h_e_e_cutFlow->GetXaxis()->SetBinLabel(2, "Quality ee");
 	h_e_e_cutFlow->GetXaxis()->SetBinLabel(3, "2 e & 0 #mu");
-	h_e_e_cutFlow->GetXaxis()->SetBinLabel(4, "OS");
-	h_e_e_cutFlow->GetXaxis()->SetBinLabel(6, "0 #tau");
-	if (options["-t"] == "1") h_e_e_cutFlow->GetXaxis()->SetBinLabel(9, "MC truth");
+	h_e_e_cutFlow->GetXaxis()->SetBinLabel(4, "0 #tau");
+	if (options["-t"] == "1") h_e_e_cutFlow->GetXaxis()->SetBinLabel(5, "MC truth");
 	h_e_mu_cutFlow->GetXaxis()->SetBinLabel(1, "All");
 	h_e_mu_cutFlow->GetXaxis()->SetBinLabel(2, "Quality #mu");
 	h_e_mu_cutFlow->GetXaxis()->SetBinLabel(3, "1 e & 1 #mu");
-	h_e_mu_cutFlow->GetXaxis()->SetBinLabel(4, "OS");
-	h_e_mu_cutFlow->GetXaxis()->SetBinLabel(6, "0 #tau");
-	if (options["-t"] == "1") h_e_mu_cutFlow->GetXaxis()->SetBinLabel(9, "MC truth");
+	h_e_mu_cutFlow->GetXaxis()->SetBinLabel(4, "0 #tau");
+	if (options["-t"] == "1") h_e_mu_cutFlow->GetXaxis()->SetBinLabel(5, "MC truth");
 	h_mu_mu_cutFlow->GetXaxis()->SetBinLabel(1, "All");
 	h_mu_mu_cutFlow->GetXaxis()->SetBinLabel(2, "Quality #mu#mu");
 	h_mu_mu_cutFlow->GetXaxis()->SetBinLabel(3, "2 #mu & 0 e");
-	h_mu_mu_cutFlow->GetXaxis()->SetBinLabel(4, "OS");
-	h_mu_mu_cutFlow->GetXaxis()->SetBinLabel(6, "0 #tau");
-	if (options["-t"] == "1") h_mu_mu_cutFlow->GetXaxis()->SetBinLabel(9, "MC truth");
+	h_mu_mu_cutFlow->GetXaxis()->SetBinLabel(4, "0 #tau");
+	if (options["-t"] == "1") h_mu_mu_cutFlow->GetXaxis()->SetBinLabel(5, "MC truth");
 	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(1, "h->#tau#tau check");
 	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(2, "h->#tau#tau pass");
 	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(3, "MC-truth check");
 	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(4, "MC-truth pass");
-	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(7, "#taus check");
-	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(8, "#taus pass");
-	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(9, "h->#tau#tau->ee check");
-	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(10, "h->#tau#tau->ee pass");
-	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(11, "h->#tau#tau->e#mu check");
-	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(12, "h->#tau#tau->e#mu pass");
-	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(13, "h->#tau#tau->#mu#mu check");
-	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(14, "h->#tau#tau->#mu#mu pass");
-	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(15, "h->#tau#tau->e#tau_{h} check");
-	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(16, "h->#tau#tau->e#tau_{h} pass");
-	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(17, "h->#tau#tau->#mu#tau_{h} check");
-	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(18, "h->#tau#tau->#mu#tau_{h} pass");
-	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(19, "h->#tau#tau->#tau_{h}#tau_{h} check");
-	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(20, "h->#tau#tau->#tau_{h}#tau_{h} pass");
+	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(5, "#taus check");
+	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(6, "#taus pass");
+	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(7, "h->#tau#tau->ee check");
+	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(8, "h->#tau#tau->ee pass");
+	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(9, "h->#tau#tau->e#mu check");
+	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(10, "h->#tau#tau->e#mu pass");
+	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(11, "h->#tau#tau->#mu#mu check");
+	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(12, "h->#tau#tau->#mu#mu pass");
+	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(13, "h->#tau#tau->e#tau_{h} check");
+	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(14, "h->#tau#tau->e#tau_{h} pass");
+	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(15, "h->#tau#tau->#mu#tau_{h} check");
+	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(16, "h->#tau#tau->#mu#tau_{h} pass");
+	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(17, "h->#tau#tau->#tau_{h}#tau_{h} check");
+	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(18, "h->#tau#tau->#tau_{h}#tau_{h} pass");
 	std::cout << "Plots initialised\n";
 	//___________________________________________
 	//Load data__________________________________
@@ -1016,6 +1013,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 				if (taus.size() >= 2) {//2 quality taus
 					h_tau_tau_cutFlow->Fill("Quality #tau#tau", 1);
 					if (getOSTauTauPair(branchJet, &taus, &tau_0, &tau_1)) { //OS Tau pair
+						h_tau_tau_cutFlow->Fill("OS", 1);
 						tmpJet = (Jet*)branchJet->At(tau_0);
 						v_tau_0 = tmpJet->P4();
 						tmpJet = (Jet*)branchJet->At(tau_1);
