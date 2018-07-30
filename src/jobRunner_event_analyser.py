@@ -9,7 +9,7 @@ dataDir =  '/eos/cms/store/cmst3/group/exovv/clange/Xtautau/'
 fileName = 'Xtautau_delphes_events.root'
 softDir = '$HOME/delphes_event_selection/src'
 
-def submitJob(inputFiles, mass, queue, dryrun, uid):
+def submitJob(inputFiles, mass, queue, dryrun, uid, truth):
     job = 'export HOME=/afs/cern.ch/user/g/gstrong/\n'
     job += 'source /afs/cern.ch/sw/lcg/external/gcc/4.9.3/x86_64-slc6/setup.sh\n'
     job += 'source /afs/cern.ch/sw/lcg/app/releases/ROOT/6.06.00/x86_64-slc6-gcc49-opt/root/bin/thisroot.sh\n'
@@ -21,7 +21,7 @@ def submitJob(inputFiles, mass, queue, dryrun, uid):
     job += softDir + './delphes_event_selection'
     job += ' -i ' + inputFile
     job += ' -o ' + workDir + mass + '/' + uid
-    job += ' -t ' + 
+    job += ' -t ' + truth
 
     jobName = mass + '_' + uid + '.job'
     with open(jobName, 'w') as f:
@@ -39,6 +39,7 @@ if __name__ == "__main__":
     parser.add_option("-n", "--nFiles", dest = "nFiles", type='int', action = "store", default = "3", help = "Number of files per job. Default: 3")
     parser.add_option("-d", "--dryrun", dest = "dryrun", action = "store", default = False, help = "Dry run?, default False")
     parser.add_option("-q", "--queue", dest = "queue", action = "store", default = '8nh', help = "Queue for submission. Default 8nh")
+    parser.add_option("-t", "--truth", dest = "queue", action = "store", default = False, help = "Produce gen infor? Deafult False")
     opts, args = parser.parse_args()
 
     masses = glob.glob(dataDir + '*')
@@ -50,4 +51,4 @@ if __name__ == "__main__":
         print len(samples), "samples found for mass point", mass
         for uid, dirs in enumerate([samples[x:x+opts.nFiles] for x in xrange(0, len(samples), opts.nFiles)]):
             files = [x + '/' + fileName for x in dirs]
-            submitJob(','.join(files), mass, opts.queue, opts.dryrun, str(uid))
+            submitJob(','.join(files), mass, opts.queue, opts.dryrun, str(uid), opts.truth)
