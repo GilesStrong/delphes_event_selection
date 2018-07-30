@@ -36,11 +36,13 @@ def submitJob(inputFiles, mass, queue, dryrun, uid, truth):
 
 if __name__ == "__main__":
     parser = optparse.OptionParser(usage = __doc__)
-    parser.add_option("-n", "--nFiles", dest = "nFiles", type='int', action = "store", default = "3", help = "Number of files per job. Default: 3")
     parser.add_option("-d", "--dryrun", dest = "dryrun", action = "store", default = False, help = "Dry run?, default False")
     parser.add_option("-q", "--queue", dest = "queue", action = "store", default = '8nh', help = "Queue for submission. Default 8nh")
-    parser.add_option("-t", "--truth", dest = "queue", action = "store", default = False, help = "Produce gen infor? Deafult False")
+    parser.add_option("-t", "--truth", dest = "queue", action = "store", default = False, help = "Produce gen info? Deafult False")
     opts, args = parser.parse_args()
+
+    os.system("rm -r " + workDir)
+    os.system("mkdir " + workDir)
 
     masses = glob.glob(dataDir + '*')
     print len(masses), "mass points found"
@@ -49,6 +51,5 @@ if __name__ == "__main__":
         mass = masspoint[masspoint.rfind('/')+1:]
         samples = glob.glob(masspoint + '/*')
         print len(samples), "samples found for mass point", mass
-        for uid, dirs in enumerate([samples[x:x+opts.nFiles] for x in xrange(0, len(samples), opts.nFiles)]):
-            files = [x + '/' + fileName for x in dirs]
-            submitJob(','.join(files), mass, opts.queue, opts.dryrun, str(uid), opts.truth)
+        for uid, sample in enumerate(samples):
+            submitJob(sample, mass, opts.queue, opts.dryrun, str(uid), opts.truth)
