@@ -9,7 +9,7 @@ dataDir =  '/eos/cms/store/cmst3/group/exovv/clange/Xtautau/'
 fileName = 'Xtautau_delphes_events.root'
 softDir = '$HOME/delphes_event_selection/src'
 
-def submitJob(inputFiles, mass, queue, dryrun, uid):
+def submitJob(inputFile, mass, queue, dryrun, uid):
     job = 'export HOME=/afs/cern.ch/user/g/gstrong/\n'
     job += 'source /afs/cern.ch/sw/lcg/external/gcc/4.9.3/x86_64-slc6/setup.sh\n'
     job += 'source /afs/cern.ch/sw/lcg/app/releases/ROOT/6.06.00/x86_64-slc6-gcc49-opt/root/bin/thisroot.sh\n'
