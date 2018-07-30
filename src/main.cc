@@ -1354,6 +1354,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					gen_h_tt_E = v_gen_higgs_tt.E();
 					mPT_pT = tmpMPT->MET;
 					mPT_phi = tmpMPT->Phi;
+					std::cout << "Here 0\n";
 					t_0_pT = v_tau_0.Pt();
 					t_0_eta = v_tau_0.Eta();
 					t_0_phi = v_tau_0.Phi();
@@ -1368,12 +1369,14 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					h_tt_eta = v_higgs_tt.Eta();
 					h_tt_phi = v_higgs_tt.Phi();
 					h_tt_mass = v_higgs_tt.M();
+					std::cout << "Here 2\n";
 					tmpWeight = (Weight*)branchWeights->At(0);
 					weight = tmpWeight->Weight;
+					std::cout << "Here 3\n";
 					e_e->Fill();
 					h_datasetSizes->Fill("e e", 1);
 					eventAccepted = true;
-					std::cout << "Here\n";
+					std::cout << "Here 4\n";
 				}
 			}
 		}
