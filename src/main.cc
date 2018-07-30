@@ -1404,6 +1404,9 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	//___________________________________
 	std::cout << "Event loop complete\n";
 	//___________________________________________
+	TFile* outputFile = new TFile((outputName + ".root").c_str(), "recreate");
+	outputFile->cd();
+	std::cout << "Saving data\n";
 	std::cout << "Creating plots\n";
 	TCanvas* c_datasetSizes = new TCanvas();
 	c_datasetSizes->SetLogy();
@@ -1475,9 +1478,6 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	std::cout << "Plots created\n";
 	//___________________________________________
 	//Save datasets______________________________
-	TFile* outputFile = new TFile((outputName + ".root").c_str(), "recreate");
-	outputFile->cd();
-	std::cout << "Saving data\n";
 	e_tau->Write();
 	mu_tau->Write();
 	tau_tau->Write();
