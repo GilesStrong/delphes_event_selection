@@ -1359,11 +1359,14 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					t_0_eta = v_tau_0.Eta();
 					t_0_phi = v_tau_0.Phi();
 					t_0_mass = eMass;
+					std::cout << "Here 0.1\n";
 					t_0_mT = getMT(t_0_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_0, tmpMPT->P4()));
+					std::cout << "Here 0.2\n";
 					t_1_pT = v_tau_1.Pt();
 					t_1_eta = v_tau_1.Eta();
 					t_1_phi = v_tau_1.Phi();
 					t_1_mass = eMass;
+					std::cout << "Here 1\n";
 					t_1_mT = getMT(t_1_pT, mPT_pT, ROOT::Math::VectorUtil::DeltaPhi(v_tau_1, tmpMPT->P4()));
 					h_tt_pT = v_higgs_tt.Pt();
 					h_tt_eta = v_higgs_tt.Eta();
