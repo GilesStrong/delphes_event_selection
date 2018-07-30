@@ -8,46 +8,42 @@
 #ifndef FINALSTATECUTS_HH_
 #define FINALSTATECUTS_HH_
 
-double ePTMin = 27.0; //Gev
-double eEtaMax = 2.1;
-double eIsoMax = 0.1;
-double muPTMin = 23.0; //Gev
-double muEtaMax = 2.1;
-double muIsoMax = 0.15;
-double ePTMinAdd = 10.0; //Gev
-double eEtaMaxAdd = 2.5;
-double eIsoMaxAdd = 0.3;
-double muPTMinAdd = 10.0; //Gev
+double ePTMin = 20.0; //Gev
+double eEtaMax = 2.4;
+double eIsoMax = 0.2;
+double muPTMin = 20.0; //Gev
+double muEtaMax = 2.4;
+double muIsoMax = 0.2;
+double ePTMinAdd = 20.0; //Gev
+double eEtaMaxAdd = 2.4;
+double eIsoMaxAdd = 0.2;
+double muPTMinAdd = 20.0; //Gev
 double muEtaMaxAdd = 2.4;
-double muIsoMaxAdd = 0.3;
+double muIsoMaxAdd = 0.2;
 double tauPTMin; //Gev
 double tauEtaMax;
-double bJetPTMin = 30.0; //Gev
-double bJetEtaMax = 2.4;
-double higgsMassMin = 80; //GeV
-double higgsMassMax = 160; //GeV
 
 bool massCut = false;
 
 void finalstateSet(std::string set) {
 	if (set == "e_tau_b_b") {
 		tauPTMin = 20.0;
-		tauEtaMax = 2.3;
+		tauEtaMax = 2.4;
 	} else if (set == "mu_tau_b_b") {
 		tauPTMin = 20.0;
-		tauEtaMax = 2.3;
+		tauEtaMax = 2.4;
 	} else if (set == "tau_tau_b_b") {
-		tauPTMin = 45.0;
-		tauEtaMax = 2.1;
+		tauPTMin = 20.0;
+		tauEtaMax = 2.4;
 	} else if (set == "e_e_b_b") {
 		tauPTMin = 20.0;
-		tauEtaMax = 2.5;
+		tauEtaMax = 2.4;
 	} else if (set == "e_mu_b_b") {
 		tauPTMin = 20.0;
-		tauEtaMax = 2.5;
+		tauEtaMax = 2.4;
 	} else if (set == "mu_mu_b_b") {
 		tauPTMin = 20.0;
-		tauEtaMax = 2.5;
+		tauEtaMax = 2.4;
 	}
 }
 #endif /* FINALSTATECUTS_HH_ */

@@ -715,7 +715,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	h_tau_tau_cutFlow->GetXaxis()->SetBinLabel(5, "OS");
 	if (options["-t"] == "1") h_tau_tau_cutFlow->GetXaxis()->SetBinLabel(8, "MC truth");
 	h_e_e_cutFlow->GetXaxis()->SetBinLabel(1, "All");
-	h_e_e_cutFlow->GetXaxis()->SetBinLabel(2, "Quality di-e");
+	h_e_e_cutFlow->GetXaxis()->SetBinLabel(2, "Quality ee");
 	h_e_e_cutFlow->GetXaxis()->SetBinLabel(3, "2 e & 0 #mu");
 	h_e_e_cutFlow->GetXaxis()->SetBinLabel(4, "OS");
 	h_e_e_cutFlow->GetXaxis()->SetBinLabel(6, "0 #tau_{h}");
@@ -727,7 +727,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	h_e_mu_cutFlow->GetXaxis()->SetBinLabel(6, "0 #tau_{h}");
 	if (options["-t"] == "1") h_e_mu_cutFlow->GetXaxis()->SetBinLabel(9, "MC truth");
 	h_mu_mu_cutFlow->GetXaxis()->SetBinLabel(1, "All");
-	h_mu_mu_cutFlow->GetXaxis()->SetBinLabel(2, "Quality di-#mu");
+	h_mu_mu_cutFlow->GetXaxis()->SetBinLabel(2, "Quality #mu#mu");
 	h_mu_mu_cutFlow->GetXaxis()->SetBinLabel(3, "2 #mu & 0 e");
 	h_mu_mu_cutFlow->GetXaxis()->SetBinLabel(4, "OS");
 	h_mu_mu_cutFlow->GetXaxis()->SetBinLabel(6, "0 #tau_{h}");
@@ -1098,6 +1098,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 				break;
 			}
 		}
+
 		if (muons.size() == 2 && !addMuon && 
 			((Muon*)branchMuon->At(muons[0]))->Charge != ((Muon*)branchMuon->At(muons[1]))->Charge) { //One quality OS muon pair found and no additional muons
 			h_mu_mu_cutFlow->Fill("Quality #mu#mu", 1);
@@ -1338,7 +1339,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					if (options["-t"] == "1" & gen_mctMatch) {
 						h_e_e_cutFlow->Fill("MC truth", 1);
 					}
-					if (debug) std::cout << "Accepted mu_mu event\n";
+					if (debug) std::cout << "Accepted e_e event\n";
 					gen_t_0_pT = v_gen_tau_0.Pt();
 					gen_t_0_eta = v_gen_tau_0.Eta();
 					gen_t_0_phi = v_gen_tau_0.Phi();
@@ -1372,6 +1373,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 					e_e->Fill();
 					h_datasetSizes->Fill("e e", 1);
 					eventAccepted = true;
+					std::cout << "Here\n";
 				}
 			}
 		}
