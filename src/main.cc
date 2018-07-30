@@ -698,21 +698,19 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	h_datasetSizes->GetXaxis()->SetBinLabel(6, "e #mu");
 	h_datasetSizes->GetXaxis()->SetBinLabel(7, "#mu #mu");
 	h_e_tau_cutFlow->GetXaxis()->SetBinLabel(1, "All");
-	h_e_tau_cutFlow->GetXaxis()->SetBinLabel(2, "Quality #tau");
-	h_e_tau_cutFlow->GetXaxis()->SetBinLabel(4, "Quality e");
-	h_e_tau_cutFlow->GetXaxis()->SetBinLabel(5, "1 e & 0 #mu");
-	h_e_tau_cutFlow->GetXaxis()->SetBinLabel(6, "OS");
+	h_e_tau_cutFlow->GetXaxis()->SetBinLabel(2, "Quality e");
+	h_e_tau_cutFlow->GetXaxis()->SetBinLabel(3, "1 e & 0 #mu");
+	h_e_tau_cutFlow->GetXaxis()->SetBinLabel(4, "Quality #tau");
 	if (options["-t"] == "1") h_e_tau_cutFlow->GetXaxis()->SetBinLabel(9, "MC truth");
 	h_mu_tau_cutFlow->GetXaxis()->SetBinLabel(1, "All");
-	h_mu_tau_cutFlow->GetXaxis()->SetBinLabel(2, "Quality #tau");
-	h_mu_tau_cutFlow->GetXaxis()->SetBinLabel(4, "Quality #mu");
-	h_mu_tau_cutFlow->GetXaxis()->SetBinLabel(5, "1 #mu & 0 e");
-	h_mu_tau_cutFlow->GetXaxis()->SetBinLabel(6, "OS");
+	h_mu_tau_cutFlow->GetXaxis()->SetBinLabel(2, "Quality #mu");
+	h_mu_tau_cutFlow->GetXaxis()->SetBinLabel(3, "1 #mu & 0 e");
+	h_mu_tau_cutFlow->GetXaxis()->SetBinLabel(4, "Quality #tau");
 	if (options["-t"] == "1") h_mu_tau_cutFlow->GetXaxis()->SetBinLabel(9, "MC truth");
 	h_tau_tau_cutFlow->GetXaxis()->SetBinLabel(1, "All");
-	h_tau_tau_cutFlow->GetXaxis()->SetBinLabel(2, "Quality #tau#tau");
-	h_tau_tau_cutFlow->GetXaxis()->SetBinLabel(4, "0 e & 0 #mu");
-	h_tau_tau_cutFlow->GetXaxis()->SetBinLabel(5, "OS");
+	h_tau_tau_cutFlow->GetXaxis()->SetBinLabel(2, "0 e & 0 #mu");
+	h_tau_tau_cutFlow->GetXaxis()->SetBinLabel(3, "Quality #tau#tau");
+	h_tau_tau_cutFlow->GetXaxis()->SetBinLabel(4, "OS");
 	if (options["-t"] == "1") h_tau_tau_cutFlow->GetXaxis()->SetBinLabel(8, "MC truth");
 	h_e_e_cutFlow->GetXaxis()->SetBinLabel(1, "All");
 	h_e_e_cutFlow->GetXaxis()->SetBinLabel(2, "Quality ee");
@@ -762,7 +760,6 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	TClonesArray *branchJet = treeReader->UseBranch("Jet");
 	TClonesArray *branchMissingET = treeReader->UseBranch("MissingET");
 	TClonesArray *branchParticle = treeReader->UseBranch("Particle");
-	TClonesArray *branchWeights = treeReader->UseBranch("Weight");
 	std::cout << "Data loaded\n";
 	//_______________________________________
 	//Loop through events____________________
@@ -1065,8 +1062,6 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 						h_tt_eta = v_higgs_tt.Eta();
 						h_tt_phi = v_higgs_tt.Phi();
 						h_tt_mass = v_higgs_tt.M();
-						tmpWeight = (Weight*)branchWeights->At(0);
-						weight = tmpWeight->Weight;
 						tau_tau->Fill();
 						h_datasetSizes->Fill("#tau_{h} #tau_{h}", 1);
 						eventAccepted = true;
