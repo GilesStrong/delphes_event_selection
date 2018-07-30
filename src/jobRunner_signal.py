@@ -19,7 +19,7 @@ def submitJob(inputFile, mass, queue, dryrun, uid):
     job += 'mkdir ' + workDir + mass + '\n'
 
     job += softDir + '/delphes_event_selection'
-    job += ' -i ' + inputFile + 
+    job += ' -i ' + inputFile
     job += ' -o ' + workDir + mass + '/' + uid
     job += ' -t 1'
 
