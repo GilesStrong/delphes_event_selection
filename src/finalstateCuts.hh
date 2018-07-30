@@ -26,22 +26,22 @@ double tauEtaMax;
 bool massCut = false;
 
 void finalstateSet(std::string set) {
-	if (set == "e_tau_b_b") {
+	if (set == "e_tau") {
 		tauPTMin = 20.0;
 		tauEtaMax = 2.4;
-	} else if (set == "mu_tau_b_b") {
+	} else if (set == "mu_tau") {
 		tauPTMin = 20.0;
 		tauEtaMax = 2.4;
-	} else if (set == "tau_tau_b_b") {
+	} else if (set == "tau_tau") {
 		tauPTMin = 20.0;
 		tauEtaMax = 2.4;
-	} else if (set == "e_e_b_b") {
+	} else if (set == "e_e") {
 		tauPTMin = 20.0;
 		tauEtaMax = 2.4;
-	} else if (set == "e_mu_b_b") {
+	} else if (set == "e_mu") {
 		tauPTMin = 20.0;
 		tauEtaMax = 2.4;
-	} else if (set == "mu_mu_b_b") {
+	} else if (set == "mu_mu") {
 		tauPTMin = 20.0;
 		tauEtaMax = 2.4;
 	}

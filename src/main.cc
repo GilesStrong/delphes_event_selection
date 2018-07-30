@@ -732,8 +732,8 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	h_mu_mu_cutFlow->GetXaxis()->SetBinLabel(4, "OS");
 	h_mu_mu_cutFlow->GetXaxis()->SetBinLabel(6, "0 #tau");
 	if (options["-t"] == "1") h_mu_mu_cutFlow->GetXaxis()->SetBinLabel(9, "MC truth");
-	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(1, "hh->#tau#tau check");
-	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(2, "hh->#tau#tau pass");
+	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(1, "h->#tau#tau check");
+	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(2, "h->#tau#tau pass");
 	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(3, "MC-truth check");
 	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(4, "MC-truth pass");
 	mcTruthPlots["cuts"]->GetXaxis()->SetBinLabel(7, "#taus check");
