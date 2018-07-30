@@ -297,7 +297,7 @@ bool getGenHiggs(TClonesArray *branchParticle,
 					if (std::abs(((GenParticle*)branchParticle->At(((GenParticle*)branchParticle->At(p))->D1))->PID) == 15
 							&& std::abs(((GenParticle*)branchParticle->At(((GenParticle*)branchParticle->At(p))->D2))->PID) == 15) { //Daughters are taus
 						if (hTauTau != NULL) *hTauTau = p; //Point to Higgs
-						if (plots != NULL) (*plots)["cuts"]->Fill("h->tau#tau pass", 1);
+						if (plots != NULL) (*plots)["cuts"]->Fill("h->#tau#tau pass", 1);
 						return true;
 					}
 				}
@@ -719,7 +719,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 	if (options["-t"] == "1") h_e_e_cutFlow->GetXaxis()->SetBinLabel(5, "MC truth");
 	h_e_mu_cutFlow->GetXaxis()->SetBinLabel(1, "All");
 	h_e_mu_cutFlow->GetXaxis()->SetBinLabel(2, "Quality #mu");
-	h_e_mu_cutFlow->GetXaxis()->SetBinLabel(3, "1 e & 1 #mu");
+	h_e_mu_cutFlow->GetXaxis()->SetBinLabel(3, "1 #mu & 1 e");
 	h_e_mu_cutFlow->GetXaxis()->SetBinLabel(4, "0 #tau");
 	if (options["-t"] == "1") h_e_mu_cutFlow->GetXaxis()->SetBinLabel(5, "MC truth");
 	h_mu_mu_cutFlow->GetXaxis()->SetBinLabel(1, "All");
@@ -1017,7 +1017,7 @@ int main(int argc, char *argv[]) { //input, output, N events, truth
 						tmpJet = (Jet*)branchJet->At(tau_0);
 						v_tau_0 = tmpJet->P4();
 						tmpJet = (Jet*)branchJet->At(tau_1);
-						v_tau_1 = tmpElectron->P4();
+						v_tau_1 = tmpJet->P4();
 						tmpMPT = (MissingET*)branchMissingET->At(0);
 						v_higgs_tt = getHiggs2Taus(tmpMPT, v_tau_0, v_tau_1);
 						gen_mctMatch = false;
