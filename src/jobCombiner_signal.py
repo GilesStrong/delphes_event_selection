@@ -18,4 +18,4 @@ if __name__ == "__main__":
         mass = masspoint[masspoint.rfind('/')+1:]
         samples = glob.glob(masspoint + '/*')
         print len(samples), "samples found for mass point", mass
-        os.system('hadd ' dataDir + 'signal/' + mass + '.root ' + " ".join(map(str, samples)))
+        os.system('hadd ' + dataDir + 'signal/' + mass + '.root ' + " ".join(map(str, samples)))
